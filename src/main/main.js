@@ -117,40 +117,48 @@ ipcMain.handle('overlay-drag-end', (event, id) => {
 })
 
 // ─── IPC: Resize ────────────────────────────────────────────────────────────
-// corner: 'nw' | 'ne' | 'sw' | 'se'
+// Stores the window state at the moment a resize drag begins
+const resizeStartState = {}
+
+ipcMain.handle('overlay-resize-start', (event, id) => {
+  const win = overlayWindows[id]
+  if (!win || win.isDestroyed()) return
+  const [x, y] = win.getPosition()
+  const [w, h] = win.getSize()
+  resizeStartState[id] = { x, y, w, h }
+})
+
+// dx/dy are absolute deltas from the mouse position when drag started
 ipcMain.handle('overlay-resize-move', (event, { id, corner, dx, dy }) => {
   const win = overlayWindows[id]
   if (!win || win.isDestroyed()) return
 
   const def = OVERLAY_DEFAULTS[id]
-  const [wx, wy] = win.getPosition()
-  const [ww, wh] = win.getSize()
+  const start = resizeStartState[id]
+  if (!start) return
 
-  let newX = wx, newY = wy, newW = ww, newH = wh
+  let newX = start.x, newY = start.y
+  let newW = start.w, newH = start.h
 
-  // NW corner: move origin, shrink size
-  if (corner === 'nw') { newX += dx; newY += dy; newW -= dx; newH -= dy }
-  // NE corner: move origin Y only, expand width
-  if (corner === 'ne') { newY += dy; newW += dx; newH -= dy }
-  // SW corner: move origin X only, expand height
-  if (corner === 'sw') { newX += dx; newW -= dx; newH += dy }
-  // SE corner: pure expand
-  if (corner === 'se') { newW += dx; newH += dy }
+  // Apply corner-specific resize from the original start state
+  if (corner === 'nw') { newX = start.x + dx; newY = start.y + dy; newW = start.w - dx; newH = start.h - dy }
+  if (corner === 'ne') { newY = start.y + dy; newW = start.w + dx; newH = start.h - dy }
+  if (corner === 'sw') { newX = start.x + dx; newW = start.w - dx; newH = start.h + dy }
+  if (corner === 'se') { newW = start.w + dx; newH = start.h + dy }
 
-  // Enforce minimums (default size is the floor)
-  newW = Math.max(def.width,  Math.round(newW))
-  newH = Math.max(def.height, Math.round(newH))
+  // Clamp to minimum (default size)
+  const clampedW = Math.max(def.width,  Math.round(newW))
+  const clampedH = Math.max(def.height, Math.round(newH))
 
-  // If width/height was clamped, don't shift origin either
-  if (newW === def.width  && (corner === 'nw' || corner === 'sw')) newX = wx
-  if (newH === def.height && (corner === 'nw' || corner === 'ne')) newY = wy
+  // If clamped, don't move the origin either
+  if (clampedW !== Math.round(newW) && (corner === 'nw' || corner === 'sw')) newX = start.x + (start.w - clampedW)
+  if (clampedH !== Math.round(newH) && (corner === 'nw' || corner === 'ne')) newY = start.y + (start.h - clampedH)
 
   win.setPosition(Math.round(newX), Math.round(newY))
-  win.setSize(newW, newH)
+  win.setSize(clampedW, clampedH)
 
-  // Push updated size to renderer so it can rescale content live
   win.webContents.send('overlay-size', {
-    width: newW, height: newH,
+    width: clampedW, height: clampedH,
     defaultWidth: def.width, defaultHeight: def.height
   })
 })

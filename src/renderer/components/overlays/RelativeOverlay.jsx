@@ -8,7 +8,7 @@ const DRIVER_COLOURS = ['#F59E0B','#64748B','#3B82F6','#FF6B35','#E8001D','#22C5
 
 export default function RelativeOverlay() {
   const { data, connected } = useTelemetry()
-  const scale = useOverlayScale('relative')
+  const { scale } = useOverlayScale('relative')
 
   const drivers = useMemo(() => {
     if (!data?.relative) return []

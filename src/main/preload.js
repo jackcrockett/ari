@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('ari', {
   dragEnd:  (id) => ipcRenderer.invoke('overlay-drag-end', id),
 
   // Resize
+  resizeStart: (id) => ipcRenderer.invoke('overlay-resize-start', id),
   resizeMove: (id, corner, dx, dy) => ipcRenderer.invoke('overlay-resize-move', { id, corner, dx, dy }),
   resizeEnd:  (id) => ipcRenderer.invoke('overlay-resize-end', id),
 

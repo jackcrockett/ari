@@ -1,61 +1,62 @@
-import React, { useRef, useEffect, useCallback } from 'react'
+import React, { useRef, useCallback } from 'react'
 
-const HANDLE_SIZE = 16  // px — hover zone at each corner
-const CURSORS = {
-  nw: 'nw-resize',
-  ne: 'ne-resize',
-  sw: 'sw-resize',
-  se: 'se-resize',
-}
+const HANDLE_SIZE = 18
+const CURSORS = { nw: 'nw-resize', ne: 'ne-resize', sw: 'sw-resize', se: 'se-resize' }
 
-const CORNER_STYLE = {
-  nw: { top: 0,    left: 0    },
-  ne: { top: 0,    right: 0   },
-  sw: { bottom: 0, left: 0    },
-  se: { bottom: 0, right: 0   },
-}
-
-/**
- * ResizeHandles — renders four invisible corner zones over an overlay.
- * Hovering a corner disables mouse passthrough so the resize drag can fire.
- * Dragging resizes the Electron window via IPC.
- */
 export default function ResizeHandles({ overlayId }) {
   const hasElectron = typeof window !== 'undefined' && window.ari
-  const activeCorner = useRef(null)
-  const lastPos = useRef({ x: 0, y: 0 })
+  const activeCorner   = useRef(null)
   const hoveringHandle = useRef(false)
+  const readyToMove    = useRef(false)
+  const rafPending     = useRef(false)   // rAF throttle gate
+  const latestDelta    = useRef({ dx: 0, dy: 0 })
 
-  const startResize = useCallback((corner, e) => {
+  const startResize = useCallback(async (corner, e) => {
     if (e.button !== 0) return
     e.preventDefault()
     e.stopPropagation()
 
-    activeCorner.current = corner
-    lastPos.current = { x: e.screenX, y: e.screenY }
+    activeCorner.current  = corner
+    readyToMove.current   = false
+    rafPending.current    = false
 
-    const onMove = (e) => {
-      if (!activeCorner.current) return
-      const dx = e.screenX - lastPos.current.x
-      const dy = e.screenY - lastPos.current.y
-      lastPos.current = { x: e.screenX, y: e.screenY }
-      if (hasElectron && (dx !== 0 || dy !== 0)) {
-        window.ari.resizeMove(overlayId, activeCorner.current, dx, dy)
+    const startMouseX = e.screenX
+    const startMouseY = e.screenY
+
+    // Await snapshot — main must have start state before any move is processed
+    if (hasElectron) await window.ari.resizeStart(overlayId)
+    readyToMove.current = true
+
+    const onMove = (moveEvent) => {
+      if (!activeCorner.current || !readyToMove.current) return
+      latestDelta.current = {
+        dx: moveEvent.screenX - startMouseX,
+        dy: moveEvent.screenY - startMouseY,
+      }
+      // Throttle IPC calls to one per animation frame — prevents queue flooding
+      if (!rafPending.current) {
+        rafPending.current = true
+        requestAnimationFrame(() => {
+          if (activeCorner.current && hasElectron) {
+            window.ari.resizeMove(overlayId, activeCorner.current, latestDelta.current.dx, latestDelta.current.dy)
+          }
+          rafPending.current = false
+        })
       }
     }
 
     const onUp = () => {
-      activeCorner.current = null
+      activeCorner.current  = null
+      readyToMove.current   = false
+      rafPending.current    = false
       hoveringHandle.current = false
-      if (hasElectron) {
-        window.ari.resizeEnd(overlayId)  // saves size + restores passthrough
-      }
+      if (hasElectron) window.ari.resizeEnd(overlayId)
       window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('mouseup',   onUp)
     }
 
     window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    window.addEventListener('mouseup',   onUp)
   }, [overlayId, hasElectron])
 
   const onMouseEnter = useCallback(() => {
@@ -65,28 +66,33 @@ export default function ResizeHandles({ overlayId }) {
   }, [overlayId, hasElectron])
 
   const onMouseLeave = useCallback(() => {
-    if (!hasElectron || activeCorner.current) return  // don't restore during active drag
+    if (!hasElectron || activeCorner.current) return
     hoveringHandle.current = false
     window.ari.setPassthrough(overlayId, true)
   }, [overlayId, hasElectron])
 
+  const corners = {
+    nw: { top: 0,    left: 0  },
+    ne: { top: 0,    right: 0 },
+    sw: { bottom: 0, left: 0  },
+    se: { bottom: 0, right: 0 },
+  }
+
   return (
     <>
-      {Object.entries(CORNER_STYLE).map(([corner, pos]) => (
+      {Object.entries(corners).map(([corner, pos]) => (
         <div
           key={corner}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
           onMouseDown={(e) => startResize(corner, e)}
           style={{
-            position: 'absolute',
+            position: 'fixed',
             width: HANDLE_SIZE,
             height: HANDLE_SIZE,
             cursor: CURSORS[corner],
-            zIndex: 1000,
+            zIndex: 9999,
             ...pos,
-            // Visible indicator — subtle corner bracket
-            '--c': corner,
           }}
         >
           <CornerBracket corner={corner} />
@@ -96,34 +102,24 @@ export default function ResizeHandles({ overlayId }) {
   )
 }
 
-// Tiny L-shaped bracket drawn in SVG — visible hint that corner is draggable
 function CornerBracket({ corner }) {
   const size = HANDLE_SIZE
-  const arm  = 6   // length of each bracket arm
-  const sw   = 1.5 // stroke width
-
-  // Build the L path based on which corner
+  const arm  = 7
+  const sw   = 1.5
   const paths = {
     nw: `M ${arm} ${sw/2} L ${sw/2} ${sw/2} L ${sw/2} ${arm}`,
     ne: `M ${size-arm} ${sw/2} L ${size-sw/2} ${sw/2} L ${size-sw/2} ${arm}`,
     sw: `M ${sw/2} ${size-arm} L ${sw/2} ${size-sw/2} L ${arm} ${size-sw/2}`,
     se: `M ${size-arm} ${size-sw/2} L ${size-sw/2} ${size-sw/2} L ${size-sw/2} ${size-arm}`,
   }
-
   return (
     <svg
       width={size} height={size}
-      style={{ display: 'block', opacity: 0.35, transition: 'opacity 0.15s' }}
-      onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-      onMouseLeave={e => e.currentTarget.style.opacity = '0.35'}
+      style={{ display: 'block', opacity: 0.4, transition: 'opacity 0.15s' }}
+      onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+      onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
     >
-      <path
-        d={paths[corner]}
-        fill="none"
-        stroke="#fff"
-        strokeWidth={sw}
-        strokeLinecap="round"
-      />
+      <path d={paths[corner]} fill="none" stroke="#fff" strokeWidth={sw} strokeLinecap="round" />
     </svg>
   )
 }

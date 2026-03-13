@@ -6,7 +6,7 @@ import { useOverlayScale } from '../../hooks/useOverlayScale'
 
 export default function FuelOverlay() {
   const { data, connected } = useTelemetry()
-  const scale = useOverlayScale('fuel')
+  const { scale } = useOverlayScale('fuel')
 
   if (!connected || !data?.fuel) {
     return (

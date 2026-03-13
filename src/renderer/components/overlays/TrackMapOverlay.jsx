@@ -31,7 +31,7 @@ function getPosOnTrack(pct, W, H, pad = 14) {
 
 export default function TrackMapOverlay() {
   const { data, connected } = useTelemetry()
-  const scale = useOverlayScale('trackmap')
+  const { scale } = useOverlayScale('trackmap')
   const canvasRef = useRef(null)
   const animFrameRef = useRef(null)
 

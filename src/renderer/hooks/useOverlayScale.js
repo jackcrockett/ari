@@ -1,42 +1,28 @@
 import { useState, useEffect } from 'react'
 
 /**
- * useOverlayScale — returns the CSS scale factor for an overlay.
+ * useOverlayScale — returns { scale, windowW, windowH } for an overlay.
  *
- * Listens for 'overlay-size' events pushed from main process whenever the
- * window is resized. Scale is computed as the ratio of current window size
- * to the default (base) size, taking the smaller axis so content fits.
- *
- * Falls back to 1.0 in browser/demo mode.
+ * scale    — CSS transform:scale factor (content zoom)
+ * windowW  — actual Electron window pixel width  (use for canvas resolution)
+ * windowH  — actual Electron window pixel height (use for canvas resolution)
  */
 export function useOverlayScale(overlayId) {
-  const [scale, setScale] = useState(1)
+  const [state, setState] = useState({ scale: 1, windowW: null, windowH: null })
   const hasElectron = typeof window !== 'undefined' && window.ari
 
   useEffect(() => {
     if (!hasElectron) return
 
-    // Get initial size on mount
-    window.ari.getOverlaySize(overlayId).then(size => {
-      if (!size) return
-      const s = Math.min(
-        size.width  / size.defaultWidth,
-        size.height / size.defaultHeight
-      )
-      setScale(Math.max(0.5, s))
-    })
+    const apply = ({ width, height, defaultWidth, defaultHeight }) => {
+      const s = Math.min(width / defaultWidth, height / defaultHeight)
+      setState({ scale: Math.max(0.5, s), windowW: width, windowH: height })
+    }
 
-    // Listen for live updates during resize
-    window.ari.onOverlaySize(size => {
-      const s = Math.min(
-        size.width  / size.defaultWidth,
-        size.height / size.defaultHeight
-      )
-      setScale(Math.max(0.5, s))
-    })
-
+    window.ari.getOverlaySize(overlayId).then(size => { if (size) apply(size) })
+    window.ari.onOverlaySize(apply)
     return () => window.ari.removeOverlaySizeListener()
   }, [overlayId, hasElectron])
 
-  return scale
+  return state
 }
