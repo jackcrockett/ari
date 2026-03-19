@@ -69,3 +69,18 @@ All live in `src/renderer/components/overlays/`:
 ### Legacy Python Code
 
 The `pages/`, `telemetry/`, and `iracing_ui.py` files are a superseded Python-based UI. They are not used by the current Electron app.
+
+## Critical iRacing Data Rules
+
+- **Brake**: iRacing sends 1=released, 0=fully pressed. Always invert: `display = 1 - Brake`
+- **Clutch**: same inversion as Brake: `display = 1 - Clutch`
+- **Throttle**: 0=idle, 1=full — use directly, no inversion
+- **SteeringWheelAngle**: positive=left in iRacing — negate for display
+- **Lat/Lon GPS**: available in `.ibt` files but blocked in the live SDK — do not attempt to read live GPS coordinates
+- **Track maps** come from `track-database.js` (bundled GPS data) or `.ibt` file scanning only
+
+## Known Issues to Never Reintroduce
+
+- **Brake showing 100% at rest / 0% when pressed** = inversion applied twice or not at all — check that exactly one `1 - value` inversion exists in the data path
+- **InputsOverlay** must be a wide horizontal rectangle (default width 360px), not square
+- **`SAMPLES` variable** was removed from `TrackMapOverlay` — do not re-add it
