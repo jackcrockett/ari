@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap');
+
+:root {
+  /* ARI Colour System */
+  --ari-red:        #E8001D;
+  --ari-red-dim:    rgba(232, 0, 29, 0.15);
+  --ari-surface-1:  #0e0e10;
+  --ari-surface-2:  #16161a;
+  --ari-surface-3:  #1e1e24;
+  --ari-border:     rgba(255, 255, 255, 0.07);
+  --ari-border-mid: rgba(255, 255, 255, 0.12);
+  --ari-text-1:     #ffffff;
+  --ari-text-2:     rgba(255, 255, 255, 0.65);
+  --ari-text-3:     rgba(255, 255, 255, 0.35);
+  --ari-text-4:     rgba(255, 255, 255, 0.2);
+
+  /* Status colours */
+  --ari-green:  #22C55E;
+  --ari-amber:  #F59E0B;
+  --ari-purple: #A855F7;
+  --ari-blue:   #3B82F6;
+
+  /* Typography */
+  --font-ui:   'Barlow', sans-serif;
+  --font-data: 'Barlow Condensed', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+
+  /* Overlay sizing */
+  --overlay-radius: 6px;
+  --overlay-padding: 10px 12px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: transparent;
+  font-family: var(--font-ui);
+  color: var(--ari-text-1);
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ari-border-mid); border-radius: 2px; }
+
+/* Overlay base */
+.overlay {
+  background: rgba(10, 10, 12, 0.88);
+  border: 1px solid var(--ari-border);
+  border-radius: var(--overlay-radius);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--ari-border);
+}
+
+.overlay-label {
+  font-family: var(--font-data);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ari-text-3);
+}
+
+.live-badge {
+  font-family: var(--font-data);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #fff;
+  background: var(--ari-red);
+  padding: 2px 5px;
+  border-radius: 2px;
+}
+
+/* Number formatting */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
