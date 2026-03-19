@@ -73,7 +73,7 @@ The `pages/`, `telemetry/`, and `iracing_ui.py` files are a superseded Python-ba
 ## Critical iRacing Data Rules
 
 - **Brake**: iRacing sends 1=released, 0=fully pressed. Always invert: `display = 1 - Brake`
-- **Clutch**: same inversion as Brake: `display = 1 - Clutch`
+- **Clutch**: iRacing sends 0=released, 1=fully pressed — use directly, no inversion
 - **Throttle**: 0=idle, 1=full — use directly, no inversion
 - **SteeringWheelAngle**: positive=left in iRacing — negate for display
 - **Lat/Lon GPS**: available in `.ibt` files but blocked in the live SDK — do not attempt to read live GPS coordinates
