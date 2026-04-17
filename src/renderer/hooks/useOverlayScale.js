@@ -1,28 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useContext } from 'react'
+import { OverlayPreviewContext } from '../components/OverlayPreviewContext'
+
+const hasElectron = typeof window !== 'undefined' && window.ari
 
 /**
- * useOverlayScale — returns { scale, windowW, windowH } for an overlay.
- *
- * scale    — CSS transform:scale factor (content zoom)
- * windowW  — actual Electron window pixel width  (use for canvas resolution)
- * windowH  — actual Electron window pixel height (use for canvas resolution)
+ * useOverlayScale — reads the scale factor stored for this overlay.
+ * In layout editor preview mode, always returns 1 (the preview applies its
+ * own scale transform to the whole component).
  */
 export function useOverlayScale(overlayId) {
-  const [state, setState] = useState({ scale: 1, windowW: null, windowH: null })
-  const hasElectron = typeof window !== 'undefined' && window.ari
+  const isPreview = useContext(OverlayPreviewContext)
+  const [scale, setScale] = useState(1)
 
   useEffect(() => {
-    if (!hasElectron) return
+    if (isPreview || !hasElectron) return
+    window.ari.getOverlayScale(overlayId).then(s => {
+      if (s != null) setScale(s)
+    })
+    const handler = (s) => setScale(s)
+    window.ari.onOverlayScale(handler)
+    return () => window.ari.removeOverlayScaleListener()
+  }, [overlayId, isPreview])
 
-    const apply = ({ width, height, defaultWidth, defaultHeight }) => {
-      const s = Math.min(width / defaultWidth, height / defaultHeight)
-      setState({ scale: Math.max(0.5, s), windowW: width, windowH: height })
-    }
-
-    window.ari.getOverlaySize(overlayId).then(size => { if (size) apply(size) })
-    window.ari.onOverlaySize(apply)
-    return () => window.ari.removeOverlaySizeListener()
-  }, [overlayId, hasElectron])
-
-  return state
+  return isPreview ? 1 : scale
 }

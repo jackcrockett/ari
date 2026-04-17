@@ -1,14 +1,15 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, screen } = require('electron')
 const { scanIbtFiles, enableIRacingTelemetry } = require('./trackmap-builder')
 const path = require('path')
 const IRacingSDK = require('./iracing')
 
 const isDev = !app.isPackaged
 
-let controlWindow = null
-let overlayWindows = {}
-let iracingSDK = null
-let Store = null
+let controlWindow      = null
+let layoutEditorWindow = null
+let overlayWindows     = {}
+let iracingSDK         = null
+let Store              = null
 
 async function loadStore() {
   try {
@@ -21,20 +22,54 @@ async function loadStore() {
 
 let store = null
 
+// Natural (default) dimensions for each overlay.
+// Scale is stored separately in electron-store and applied at window creation.
 const OVERLAY_DEFAULTS = {
-  relative:  { x: 20,  y: 100, width: 300, height: 225 },
-  standings: { x: 20,  y: 340, width: 300, height: 295 },
-  fuel:      { x: 20,  y: 650, width: 300, height: 175 },
-  trackmap:  { x: 340, y: 100, width: 220, height: 255 },
-  inputs:    { x: 340, y: 370, width: 260, height: 220 }
+  relative:      { x: 20,   y: 100,  width: 300, height: 225 },
+  standings:     { x: 20,   y: 340,  width: 300, height: 295 },
+  fuel:          { x: 20,   y: 650,  width: 300, height: 175 },
+  trackmap:      { x: 340,  y: 100,  width: 220, height: 255 },
+  inputs:        { x: 340,  y: 370,  width: 480, height: 100 },
+  tyres:         { x: 610,  y: 100,  width: 250, height: 310 },
+  radar:         { x: 880,  y: 100,  width: 180, height: 180 },
+  headtohead:    { x: 340,  y: 480,  width: 300, height: 210 },
+  flags:         { x: 660,  y: 420,  width: 210, height: 110 },
+  delta:         { x: 340,  y: 700,  width: 360, height: 55  },
+  lapgraph:      { x: 880,  y: 300,  width: 300, height: 180 },
+  laplog:        { x: 880,  y: 490,  width: 280, height: 250 },
+  sessiontimer:  { x: 660,  y: 310,  width: 210, height: 80  },
+  overtakealert: { x: 560,  y: 550,  width: 280, height: 75  },
+  blindspot:     { x: 580,  y: 690,  width: 160, height: 70  },
+  boostbox:      { x: 880,  y: 750,  width: 200, height: 110 },
+  weather:       { x: 660,  y: 540,  width: 200, height: 130 },
+  raceschedule:  { x: 20,   y: 840,  width: 300, height: 150 },
+  hstandings:    { x: 20,   y: 1010, width: 960, height: 55  },
+  leaderboard:   { x: 1180, y: 100,  width: 280, height: 420 },
+  flatmap:       { x: 1180, y: 530,  width: 200, height: 200 },
+  minimap:       { x: 1180, y: 740,  width: 150, height: 150 },
+  laptimespread: { x: 880,  y: 750,  width: 280, height: 110 },
+  advancedpanel: { x: 340,  y: 720,  width: 360, height: 200 },
+  datablocks:    { x: 340,  y: 930,  width: 220, height: 100 },
+  heartrate:     { x: 660,  y: 680,  width: 160, height: 80  },
+  gforce:        { x: 1070, y: 100,  width: 160, height: 160 },
+  digiflag:      { x: 560,  y: 420,  width: 320, height: 190 },
+  pitboxhelper:  { x: 560,  y: 680,  width: 260, height: 95  },
 }
 
 function getSavedConfig(id) {
+  const def = OVERLAY_DEFAULTS[id]
+  if (!def) return null
+  const base = { x: def.x, y: def.y, scale: 1, naturalWidth: def.width, naturalHeight: def.height }
   if (store) {
     const saved = store.get(`overlay.${id}`)
-    if (saved) return { ...OVERLAY_DEFAULTS[id], ...saved }
+    if (saved) return {
+      ...base,
+      x:     saved.x     ?? def.x,
+      y:     saved.y     ?? def.y,
+      scale: saved.scale ?? 1,
+    }
   }
-  return OVERLAY_DEFAULTS[id]
+  return base
 }
 
 function saveConfig(id, partial) {
@@ -48,6 +83,7 @@ function createControlWindow() {
   controlWindow = new BrowserWindow({
     width: 420, height: 680, minWidth: 380, minHeight: 500,
     frame: false, transparent: false, backgroundColor: '#0e0e10', resizable: true,
+    icon: path.join(__dirname, '../../icon.ico'),
     webPreferences: {
       nodeIntegration: false, contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
@@ -60,9 +96,33 @@ function createControlWindow() {
   controlWindow.on('closed', () => { controlWindow = null; app.quit() })
 }
 
+// ─── Layout Editor ──────────────────────────────────────────────────────────
+function createLayoutEditorWindow() {
+  if (layoutEditorWindow && !layoutEditorWindow.isDestroyed()) {
+    layoutEditorWindow.focus()
+    return
+  }
+  layoutEditorWindow = new BrowserWindow({
+    width: 1400, height: 860, minWidth: 900, minHeight: 600,
+    frame: false, transparent: false, backgroundColor: '#0a0a0c',
+    icon: path.join(__dirname, '../../icon.ico'),
+    webPreferences: {
+      nodeIntegration: false, contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    },
+    title: 'ARI — Layout Editor'
+  })
+  if (isDev) layoutEditorWindow.loadURL('http://localhost:5173/#/layout-editor')
+  else layoutEditorWindow.loadFile(path.join(__dirname, '../../dist/renderer/index.html'), { hash: '/layout-editor' })
+  layoutEditorWindow.on('closed', () => { layoutEditorWindow = null })
+}
+
 // ─── Overlay Factory ────────────────────────────────────────────────────────
 function createOverlayWindow(id, config) {
-  const { x, y, width, height } = config
+  const { x, y, scale = 1, naturalWidth, naturalHeight } = config
+  const width  = Math.max(40, Math.round(naturalWidth  * scale))
+  const height = Math.max(20, Math.round(naturalHeight * scale))
+
   const win = new BrowserWindow({
     x, y, width, height,
     frame: false, transparent: true, alwaysOnTop: true,
@@ -84,13 +144,77 @@ function createOverlayWindow(id, config) {
   return win
 }
 
+// ─── IPC: Control Window ────────────────────────────────────────────────────
+ipcMain.handle('window-minimize', () => { if (controlWindow) controlWindow.minimize() })
+ipcMain.handle('window-maximize', () => {
+  if (!controlWindow) return
+  if (controlWindow.isMaximized()) controlWindow.unmaximize()
+  else controlWindow.maximize()
+})
+ipcMain.handle('window-close', () => { if (controlWindow) controlWindow.close() })
+
+// ─── IPC: Layout Editor ─────────────────────────────────────────────────────
+ipcMain.handle('open-layout-editor', () => createLayoutEditorWindow())
+ipcMain.handle('close-layout-editor', () => {
+  if (layoutEditorWindow && !layoutEditorWindow.isDestroyed()) layoutEditorWindow.close()
+})
+
+ipcMain.handle('get-layout-state', () => {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize
+  const result = { screen: { width, height }, overlays: {} }
+  Object.entries(OVERLAY_DEFAULTS).forEach(([id, def]) => {
+    const saved = store ? store.get(`overlay.${id}`) : null
+    const win = overlayWindows[id]
+    const visible = !!(win && !win.isDestroyed() && win.isVisible())
+    result.overlays[id] = {
+      x:            saved?.x        ?? def.x,
+      y:            saved?.y        ?? def.y,
+      naturalWidth:  def.width,
+      naturalHeight: def.height,
+      scale:        saved?.scale    ?? 1,
+      inLayout:     saved?.inLayout ?? true,
+      visible,
+    }
+  })
+  return result
+})
+
+ipcMain.handle('save-layout-state', (event, updates) => {
+  // updates: { [id]: { x, y, scale } }
+  Object.entries(updates).forEach(([id, config]) => {
+    const def = OVERLAY_DEFAULTS[id]
+    if (!def) return
+    const scale  = config.scale ?? 1
+    const snapX  = Math.round(config.x)
+    const snapY  = Math.round(config.y)
+    const partial = { x: snapX, y: snapY, scale }
+    if (config.inLayout !== undefined) partial.inLayout = config.inLayout
+    saveConfig(id, partial)
+    const win = overlayWindows[id]
+    if (win && !win.isDestroyed()) {
+      const w = Math.max(40, Math.round(def.width  * scale))
+      const h = Math.max(20, Math.round(def.height * scale))
+      win.setPosition(snapX, snapY)
+      win.setSize(w, h)
+      win.webContents.send('overlay-scale', scale)
+    }
+  })
+})
+
+// ─── IPC: Scale query (overlay renderer reads this on mount) ─────────────────
+ipcMain.handle('get-overlay-scale', (event, id) => {
+  const saved = store ? store.get(`overlay.${id}`) : null
+  return saved?.scale ?? 1
+})
+
 // ─── IPC: Track map cache ──────────────────────────────────────────────────
 ipcMain.handle('trackmap-save', (event, { trackId, points }) => {
   if (store) store.set('trackmap.' + trackId, points)
 })
 ipcMain.handle('trackmap-load', (event, trackId) => {
-  if (store) return store.get('trackmap.' + trackId) || null
-  return null
+  const pts = store ? store.get('trackmap.' + trackId) : null
+  console.log('[ARI] trackmap-load:', trackId, '→', pts ? pts.length + ' pts' : 'NOT FOUND')
+  return pts || null
 })
 
 // ─── IPC: Visibility ────────────────────────────────────────────────────────
@@ -132,71 +256,6 @@ ipcMain.handle('overlay-drag-end', (event, id) => {
   }
 })
 
-// ─── IPC: Resize ────────────────────────────────────────────────────────────
-// Stores the window state at the moment a resize drag begins
-const resizeStartState = {}
-
-ipcMain.handle('overlay-resize-start', (event, id) => {
-  const win = overlayWindows[id]
-  if (!win || win.isDestroyed()) return
-  const [x, y] = win.getPosition()
-  const [w, h] = win.getSize()
-  resizeStartState[id] = { x, y, w, h }
-})
-
-// dx/dy are absolute deltas from the mouse position when drag started
-ipcMain.handle('overlay-resize-move', (event, { id, corner, dx, dy }) => {
-  const win = overlayWindows[id]
-  if (!win || win.isDestroyed()) return
-
-  const def = OVERLAY_DEFAULTS[id]
-  const start = resizeStartState[id]
-  if (!start) return
-
-  let newX = start.x, newY = start.y
-  let newW = start.w, newH = start.h
-
-  // Apply corner-specific resize from the original start state
-  if (corner === 'nw') { newX = start.x + dx; newY = start.y + dy; newW = start.w - dx; newH = start.h - dy }
-  if (corner === 'ne') { newY = start.y + dy; newW = start.w + dx; newH = start.h - dy }
-  if (corner === 'sw') { newX = start.x + dx; newW = start.w - dx; newH = start.h + dy }
-  if (corner === 'se') { newW = start.w + dx; newH = start.h + dy }
-
-  // Clamp to minimum (default size)
-  const clampedW = Math.max(def.width,  Math.round(newW))
-  const clampedH = Math.max(def.height, Math.round(newH))
-
-  // If clamped, don't move the origin either
-  if (clampedW !== Math.round(newW) && (corner === 'nw' || corner === 'sw')) newX = start.x + (start.w - clampedW)
-  if (clampedH !== Math.round(newH) && (corner === 'nw' || corner === 'ne')) newY = start.y + (start.h - clampedH)
-
-  win.setPosition(Math.round(newX), Math.round(newY))
-  win.setSize(clampedW, clampedH)
-
-  win.webContents.send('overlay-size', {
-    width: clampedW, height: clampedH,
-    defaultWidth: def.width, defaultHeight: def.height
-  })
-})
-
-ipcMain.handle('overlay-resize-end', (event, id) => {
-  const win = overlayWindows[id]
-  if (!win || win.isDestroyed()) return
-  const [wx, wy] = win.getPosition()
-  const [ww, wh] = win.getSize()
-  saveConfig(id, { x: wx, y: wy, width: ww, height: wh })
-  win.setIgnoreMouseEvents(true, { forward: true })
-})
-
-// ─── IPC: Get size (renderer needs to know its own window dims for scaling) ─
-ipcMain.handle('get-overlay-size', (event, id) => {
-  const win = overlayWindows[id]
-  if (!win || win.isDestroyed()) return null
-  const [w, h] = win.getSize()
-  const def = OVERLAY_DEFAULTS[id]
-  return { width: w, height: h, defaultWidth: def.width, defaultHeight: def.height }
-})
-
 // ─── IPC: Reset layout ──────────────────────────────────────────────────────
 ipcMain.handle('reset-overlay-positions', () => {
   Object.keys(overlayWindows).forEach(id => {
@@ -206,6 +265,7 @@ ipcMain.handle('reset-overlay-positions', () => {
       win.setPosition(def.x, def.y)
       win.setSize(def.width, def.height)
       if (store) store.delete(`overlay.${id}`)
+      win.webContents.send('overlay-scale', 1)
     }
   })
 })
@@ -219,14 +279,6 @@ function broadcastTelemetry(data) {
   })
 }
 
-// Broadcast window size changes to the overlay renderer so it can rescale
-function broadcastSize(id, win) {
-  if (win.isDestroyed()) return
-  const [w, h] = win.getSize()
-  const def = OVERLAY_DEFAULTS[id]
-  win.webContents.send('overlay-size', { width: w, height: h, defaultWidth: def.width, defaultHeight: def.height })
-}
-
 // ─── App Lifecycle ──────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   await loadStore()
@@ -235,10 +287,9 @@ app.whenReady().then(async () => {
   iracingSDK = new IRacingSDK(broadcastTelemetry)
   iracingSDK.start()
 
-  // Enable telemetry recording immediately
   try { enableIRacingTelemetry() } catch(e) { console.warn('[ARI] telemetry enable error:', e.message) }
-  // Scan ibt files immediately (synchronous, runs before window opens)
   try { scanIbtFiles(store) } catch(e) { console.warn('[ARI] ibt scan error:', e.message) }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createControlWindow()
   })

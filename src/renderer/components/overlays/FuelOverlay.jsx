@@ -2,11 +2,9 @@ import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
-import { useOverlayScale } from '../../hooks/useOverlayScale'
 
 export default function FuelOverlay() {
   const { data, connected, isDemo } = useTelemetry()
-  const { scale } = useOverlayScale('fuel')
 
   if (!connected || !data?.fuel) {
     return (
@@ -21,8 +19,7 @@ export default function FuelOverlay() {
   const fuelBarPct = Math.min(1, fuel.lapsRemaining / Math.max(fuel.lapsToFinish, 1))
 
   return (
-    <div style={{ position: 'relative', transformOrigin: 'top left', transform: `scale(${scale})`, display: 'inline-block' }}>
-      <ResizeHandles overlayId="fuel" />
+    <ResizeHandles overlayId="fuel">
       <div className="overlay" style={{ width: 280 }}>
         <DragHandle overlayId="fuel" label="Fuel">
           <span style={{ fontFamily: 'var(--font-data)', fontSize: 10, fontWeight: 600, color: shortfall ? '#F59E0B' : '#22C55E' }}>
@@ -61,6 +58,6 @@ export default function FuelOverlay() {
           </div>
         </div>
       </div>
-    </div>
+    </ResizeHandles>
   )
 }

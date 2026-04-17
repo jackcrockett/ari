@@ -2,13 +2,11 @@ import React, { useMemo } from 'react'
 import { useTelemetry, formatGap, licenseColor } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
-import { useOverlayScale } from '../../hooks/useOverlayScale'
 
 const DRIVER_COLOURS = ['#F59E0B','#64748B','#3B82F6','#FF6B35','#E8001D','#22C55E','#A855F7','#EC4899']
 
 export default function RelativeOverlay() {
   const { data, connected, isDemo } = useTelemetry()
-  const { scale } = useOverlayScale('relative')
 
   const drivers = useMemo(() => {
     if (!data?.relative) return []
@@ -28,8 +26,7 @@ export default function RelativeOverlay() {
   }
 
   return (
-    <div style={{ position: 'relative', transformOrigin: 'top left', transform: `scale(${scale})`, display: 'inline-block' }}>
-      <ResizeHandles overlayId="relative" />
+    <ResizeHandles overlayId="relative">
       <div className="overlay" style={{ width: 290 }}>
         <DragHandle overlayId="relative" label="Relative">
           <span className="live-badge" style={{ background: connected ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)", color: connected ? "#22C55E" : "#F59E0B" }}>{connected ? "LIVE" : "DEMO"}</span>
@@ -73,6 +70,6 @@ export default function RelativeOverlay() {
           )
         })}
       </div>
-    </div>
+    </ResizeHandles>
   )
 }

@@ -1,133 +1,131 @@
-import React, { useRef, useEffect, useCallback } from 'react'
+import React, { useRef, useEffect, useCallback, useContext } from 'react'
+import { OverlayPreviewContext } from '../OverlayPreviewContext'
+
+const GRID = 8
 
 /**
- * DragHandle — makes an overlay draggable by toggling Electron's
- * setIgnoreMouseEvents based on whether the cursor is over this element.
+ * DragHandle — drag bar at the top of each overlay.
  *
- * Strategy:
- * 1. A window-level mousemove listener always fires (even through ignored events
- *    when forward:true is set) so we can detect cursor position.
- * 2. When cursor enters the drag handle bounds → disable passthrough so clicks land.
- * 3. When cursor leaves → re-enable passthrough so iRacing gets clicks again.
- * 4. On mousedown → start dragging, move window via IPC on each mousemove.
- * 5. On mouseup → stop dragging, save position.
+ * Uses document-level listeners (not window/element) so fast mouse movement
+ * never loses the event. Snap-to-grid every 8px; hold Alt to disable snap.
+ * Drag origin and committed offset are stored in refs — no state updates
+ * during drag, so no re-renders while dragging.
  */
 export default function DragHandle({ overlayId, label, children }) {
-  const handleRef = useRef(null)
-  const isDragging = useRef(false)
-  const isHovering = useRef(false)
-  const lastPos = useRef({ x: 0, y: 0 })
+  const isPreview   = useContext(OverlayPreviewContext)
+  const handleRef   = useRef(null)
+  const dragState   = useRef(null)   // null = not dragging
+  const hoverRef    = useRef(false)
   const hasElectron = typeof window !== 'undefined' && window.ari
 
-  // ── Hover detection via mousemove (works even in passthrough mode) ──────────
+  // ── Hover: toggle passthrough on entry/exit of the handle bar ───────────────
   useEffect(() => {
-    if (!hasElectron) return
+    if (isPreview || !hasElectron) return
 
-    const onMouseMove = (e) => {
-      if (isDragging.current) return // handled separately
-      if (!handleRef.current) return
-
-      const rect = handleRef.current.getBoundingClientRect()
-      const over = (
-        e.clientX >= rect.left &&
-        e.clientX <= rect.right &&
-        e.clientY >= rect.top &&
-        e.clientY <= rect.bottom
-      )
-
-      if (over && !isHovering.current) {
-        isHovering.current = true
-        window.ari.setPassthrough(overlayId, false)  // enable clicks
-      } else if (!over && isHovering.current && !isDragging.current) {
-        isHovering.current = false
-        window.ari.setPassthrough(overlayId, true)   // back to passthrough
+    const onMove = (e) => {
+      if (dragState.current) return   // hover state managed by drag during active drag
+      const el = handleRef.current
+      if (!el) return
+      const r   = el.getBoundingClientRect()
+      const over = e.clientX >= r.left && e.clientX <= r.right &&
+                   e.clientY >= r.top  && e.clientY <= r.bottom
+      if (over !== hoverRef.current) {
+        hoverRef.current = over
+        window.ari.setPassthrough(overlayId, !over)
       }
     }
 
-    window.addEventListener('mousemove', onMouseMove)
-    return () => window.removeEventListener('mousemove', onMouseMove)
-  }, [overlayId, hasElectron])
+    document.addEventListener('mousemove', onMove)
+    return () => document.removeEventListener('mousemove', onMove)
+  }, [overlayId, hasElectron, isPreview])
 
-  // ── Drag handling ────────────────────────────────────────────────────────────
+  // ── Drag ────────────────────────────────────────────────────────────────────
   const onMouseDown = useCallback((e) => {
+    if (isPreview) return   // preview mode: drag is handled by the layout editor
     if (e.button !== 0) return
     e.preventDefault()
     e.stopPropagation()
 
-    isDragging.current = true
-    lastPos.current = { x: e.screenX, y: e.screenY }
+    dragState.current = {
+      originX:   e.screenX,
+      originY:   e.screenY,
+      committed: { dx: 0, dy: 0 },
+    }
 
-    const onMove = (e) => {
-      if (!isDragging.current) return
-      const dx = e.screenX - lastPos.current.x
-      const dy = e.screenY - lastPos.current.y
-      lastPos.current = { x: e.screenX, y: e.screenY }
-      if (hasElectron && (dx !== 0 || dy !== 0)) {
-        window.ari.dragMove(overlayId, dx, dy)
-      }
+    const onMove = (moveEvent) => {
+      const ds = dragState.current
+      if (!ds) return
+
+      const rawDx = moveEvent.screenX - ds.originX
+      const rawDy = moveEvent.screenY - ds.originY
+      const snap  = moveEvent.altKey ? 1 : GRID
+
+      const snappedDx = Math.round(rawDx / snap) * snap
+      const snappedDy = Math.round(rawDy / snap) * snap
+
+      const incrDx = snappedDx - ds.committed.dx
+      const incrDy = snappedDy - ds.committed.dy
+      if (incrDx === 0 && incrDy === 0) return
+
+      ds.committed.dx = snappedDx
+      ds.committed.dy = snappedDy
+
+      if (hasElectron) window.ari.dragMove(overlayId, incrDx, incrDy)
     }
 
     const onUp = () => {
-      isDragging.current = false
-      isHovering.current = false
-      if (hasElectron) {
-        window.ari.dragEnd(overlayId)     // saves position + re-enables passthrough
-      }
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      dragState.current = null
+      hoverRef.current  = false
+      if (hasElectron) window.ari.dragEnd(overlayId)  // saves pos, re-enables passthrough
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup',   onUp)
     }
 
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-  }, [overlayId, hasElectron])
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup',   onUp)
+  }, [overlayId, hasElectron, isPreview])
 
   return (
     <div
       ref={handleRef}
       onMouseDown={onMouseDown}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '5px 10px',
-        background: 'rgba(255,255,255,0.03)',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-        cursor: 'grab',
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
+        display:         'flex',
+        alignItems:      'center',
+        justifyContent:  'space-between',
+        padding:         '5px 10px',
+        background:      'rgba(255,255,255,0.03)',
+        borderBottom:    '1px solid rgba(255,255,255,0.07)',
+        cursor:          'grab',
+        userSelect:      'none',
+        WebkitUserSelect:'none',
       }}
     >
-      {/* Drag grip dots */}
+      {/* Drag grip */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 3px)',
-          gridTemplateRows: 'repeat(2, 3px)',
-          gap: 2,
-          opacity: 0.4,
-          flexShrink: 0
+          gridTemplateRows:    'repeat(2, 3px)',
+          gap: 2, opacity: 0.4, flexShrink: 0,
         }}>
           {[...Array(6)].map((_, i) => (
-            <div key={i} style={{
-              width: 3, height: 3,
-              borderRadius: '50%',
-              background: '#fff'
-            }} />
+            <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: '#fff' }} />
           ))}
         </div>
         <span style={{
-          fontFamily: 'var(--font-data)',
-          fontSize: 9,
-          fontWeight: 600,
+          fontFamily:    'var(--font-data)',
+          fontSize:      9,
+          fontWeight:    600,
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.35)'
+          color:         'rgba(255,255,255,0.35)',
         }}>
           {label}
         </span>
       </div>
 
-      {/* Right side slot */}
+      {/* Right slot */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         {children}
       </div>

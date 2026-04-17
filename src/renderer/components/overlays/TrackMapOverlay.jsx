@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
-import { useOverlayScale } from '../../hooks/useOverlayScale'
 
 const CAR_COLOURS = ['#F59E0B','#64748B','#3B82F6','#FF6B35','#E8001D','#22C55E','#A855F7','#EC4899']
 
@@ -23,7 +22,6 @@ function posOnTrack(pct, pts, W, H, pad) {
 
 export default function TrackMapOverlay() {
   const { data }   = useTelemetry()
-  const { scale }  = useOverlayScale('trackmap')
   const canvasRef  = useRef(null)
   const animRef    = useRef(null)
   const ptsRef     = useRef(null)
@@ -148,8 +146,7 @@ export default function TrackMapOverlay() {
   }, [drivers, ready])
 
   return (
-    <div style={{ position: 'relative', transformOrigin: 'top left', transform: `scale(${scale})`, display: 'inline-block' }}>
-      <ResizeHandles overlayId="trackmap" />
+    <ResizeHandles overlayId="trackmap">
       <div className="overlay" style={{ width: 210 }}>
         <DragHandle overlayId="trackmap" label="Track Map">
           <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
@@ -170,6 +167,6 @@ export default function TrackMapOverlay() {
           </div>
         </div>
       </div>
-    </div>
+    </ResizeHandles>
   )
 }

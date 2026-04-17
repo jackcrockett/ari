@@ -96,8 +96,7 @@ function compileExe() {
     execFileSync(csc, ['/out:' + EXE_PATH, CS_SRC], {
       timeout: 20000, windowsHide: true, encoding: 'utf8'
     })
-    console.log('[ARI] Bridge compiled OK')
-    return true
+      return true
   } catch(e) {
     console.warn('[ARI] Compile failed:', (e.stdout || '') + (e.stderr || '') + e.message)
     return false
@@ -191,8 +190,11 @@ function parseSessionYaml(yaml) {
       result.drivers[idx] = {
         carIdx:      idx,
         userName:    g('UserName'),
+        carNumber:   g('CarNumber'),
         iRating:     parseInt(g('IRating')) || 1500,
         licString:   g('LicString'),
+        carClassId:  parseInt(g('CarClassID')) || 0,
+        carClass:    g('CarClassShortName') || '',
         isSpectator: g('IsSpectator') === '1',
       }
     }
@@ -227,9 +229,7 @@ function buildTelemetry(buf, session) {
   // Debug: log track ID once so we can add it to the shape database
   if (!buildTelemetry._trackLogged && session) {
     buildTelemetry._trackLogged = true
-    console.log('[ARI TRACK] name="' + (session.trackName||'') + '" id="' + (session.trackId||'') + '"')
-    console.log('[ARI BRAKE TEST] Brake=' + r('Brake') + ' Clutch=' + r('Clutch'))
-  }
+      }
 
   if (!drivers[playerCarIdx] || !drivers[playerCarIdx].userName) {
     const playerName = (session && session.playerUserName) || 'You'
@@ -253,8 +253,11 @@ function buildTelemetry(buf, session) {
       carIdx:        i,
       position:      pos || 1,
       driverName:    info.userName,
+      carNumber:     info.carNumber || String(i),
       iRating:       info.iRating,
       licenseString: ((info.licString || 'D').match(/[A-Z]+/) || ['D'])[0],
+      carClassId:    info.carClassId || 0,
+      carClass:      info.carClass || '',
       gapSeconds:    (f2Time[i] || 0) - playerF2,
       onPitRoad:     onPit[i] || false,
       isPlayer:      isPlayer,
@@ -295,13 +298,42 @@ function buildTelemetry(buf, session) {
   const playerLapDistPct = lapDistPct[playerCarIdx] || 0
   if (!buildTelemetry._xzLogged) {
     buildTelemetry._xzLogged = true
-    console.log('[ARI XZ] X=' + r('X') + ' Z=' + r('Z') + ' Y=' + r('Y') + ' LapDistPct=' + playerLapDistPct)
-  }
+    }
 
   // Single position sample for track map building
   const carPositions = (playerX != null && playerZ != null && playerX !== 0)
     ? [{ carIdx: playerCarIdx, pct: playerLapDistPct, x: playerX, z: playerZ }]
     : []
+
+  // ─── Tyre Data ────────────────────────────────────────────────────────────
+  const tyreCompound = r('PlayerTireCompound') || 0
+
+  // Temperature: L/M/R zones across tread (°C)
+  const tyres = {
+    LF: {
+      tempL: r('LFtempL'), tempM: r('LFtempM'), tempR: r('LFtempR'),
+      wearL: r('LFwearL'), wearM: r('LFwearM'), wearR: r('LFwearR'),
+      pressure: r('LFpressure'),
+    },
+    RF: {
+      tempL: r('RFtempL'), tempM: r('RFtempM'), tempR: r('RFtempR'),
+      wearL: r('RFwearL'), wearM: r('RFwearM'), wearR: r('RFwearR'),
+      pressure: r('RFpressure'),
+    },
+    LR: {
+      tempL: r('LRtempL'), tempM: r('LRtempM'), tempR: r('LRtempR'),
+      wearL: r('LRwearL'), wearM: r('LRwearM'), wearR: r('LRwearR'),
+      pressure: r('LRpressure'),
+    },
+    RR: {
+      tempL: r('RRtempL'), tempM: r('RRtempM'), tempR: r('RRtempR'),
+      wearL: r('RRwearL'), wearM: r('RRwearM'), wearR: r('RRwearR'),
+      pressure: r('RRpressure'),
+    },
+  }
+
+  const lastLapTime  = r('LapLastLapTime')  || 0
+  const bestLapTime  = r('LapBestLapTime')  || 0
 
   const fuelLevel   = r('FuelLevel')      || 0
   const fuelPerHour = r('FuelUsePerHour') || 0
@@ -319,8 +351,8 @@ function buildTelemetry(buf, session) {
     gear:     r('Gear')  || 0,
     rpm:      Math.round(r('RPM') || 0),
     throttle: Math.min(1, Math.max(0, r('Throttle') || 0)),
-    brake:    Math.min(1, Math.max(0, 1 - (r('Brake') !== undefined ? r('Brake') : 1))),
-    clutch:   Math.min(1, Math.max(0, 1 - (r('Clutch') !== undefined ? r('Clutch') : 1))),
+    brake:    Math.min(1, Math.max(0, 1 - (r('Brake')  !== undefined ? r('Brake')  : 1))),
+    clutch:   Math.min(1, Math.max(0,      r('Clutch') !== undefined ? r('Clutch') : 0)),
     steering: Math.max(-1, Math.min(1, -steerRad / (Math.PI * 0.75))),  // negated: iRacing positive=left
     delta:    r('LapDeltaToBestSessionLap') || 0,
     tyreCompound: 'M',
@@ -336,6 +368,9 @@ function buildTelemetry(buf, session) {
     sessionType,
     lapsRemain,
     playerX:    playerX,
+    lastLapTime: lastLapTime,
+    bestLapTime: bestLapTime,
+    tyres:      tyres,
     carPositions: carPositions,
     playerZ:    playerZ,
     playerLapDistPct: playerLapDistPct,
@@ -346,6 +381,14 @@ function buildTelemetry(buf, session) {
     windSpeed:  r('WindVel')   || 0,
     windDir:    r('WindDir')   || 0,
     skies:      '',
+    sessionFlags:      r('SessionFlags') || 0,
+    sessionTimeRemain: r('SessionTimeRemain') != null ? r('SessionTimeRemain') : -1,
+    latAccel:    (r('LatAccel') || 0) / 9.81,
+    lonAccel:    (r('LonAccel') || 0) / 9.81,
+    ersRemaining:  r('EnergyERSBatteryPct') != null ? r('EnergyERSBatteryPct') : null,
+    ersDeployPct:  r('EnergyMGU_KLapDeployPct') != null ? r('EnergyMGU_KLapDeployPct') : null,
+    onPitRoad:     r('OnPitRoad') || false,
+    isInGarage:    r('IsInGarage') || false,
     relative,
     standings,
   }
@@ -385,6 +428,10 @@ function buildDemoTelemetry(tick) {
     fuel:{level:fl,perLap:fp,lapsRemaining:fl/fp,lapsToFinish:18,needed:Math.max(0,(18*fp)-fl)},
     currentLap:12, totalLaps:30, sessionType:'Race', lapsRemain:18,
     trackTemp:34.2, airTemp:22.5, windSpeed:8.4, windDir:215, skies:'Partly Cloudy',
+    sessionFlags:0x04, sessionTimeRemain:Math.max(0,1800-tick*0.5),
+    latAccel:Math.sin(lp*2)*2.8, lonAccel:Math.cos(lp)*1.5,
+    ersRemaining:0.7, ersDeployPct:0.35,
+    onPitRoad:false, isInGarage:false,
     relative:relative, standings:relative.slice().sort(function(a,b){return a.position-b.position})
   }
 }
@@ -419,8 +466,7 @@ class IRacingSDK {
         if (compiled) {
           this._startBridge()
         } else {
-          console.log('[ARI] Bridge compile failed — demo mode only')
-        }
+                }
       } catch(e) {
         console.warn('[ARI] Bridge startup error:', e.message)
       }
@@ -448,14 +494,12 @@ class IRacingSDK {
       })
 
       this.bridge.on('exit', code => {
-        console.log('[ARI] Bridge exited (code ' + code + ') — restarting in 2s')
-        this.bridge   = null
+              this.bridge   = null
         this.demoMode = true
         setTimeout(() => this._startBridge(), 2000)
       })
 
-      console.log('[ARI] Bridge process started')
-    } catch(e) {
+        } catch(e) {
       console.warn('[ARI] Bridge spawn failed:', e.message)
     }
   }
@@ -476,8 +520,7 @@ class IRacingSDK {
       this.readBuf = this.readBuf.slice(4 + frameLen)
 
       if (this.demoMode) {
-        console.log('[ARI] Live iRacing data connected!')
-        this.demoMode = false
+              this.demoMode = false
       }
 
       // Refresh session YAML if version changed

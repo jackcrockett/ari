@@ -2,13 +2,11 @@ import React, { useMemo } from 'react'
 import { useTelemetry, formatGap } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
-import { useOverlayScale } from '../../hooks/useOverlayScale'
 
 const DRIVER_COLOURS = ['#F59E0B','#64748B','#3B82F6','#FF6B35','#E8001D','#22C55E','#A855F7','#EC4899']
 
 export default function StandingsOverlay() {
   const { data, connected, isDemo } = useTelemetry()
-  const { scale } = useOverlayScale('standings')
 
   const standings = useMemo(() => {
     if (!data?.standings) return []
@@ -26,8 +24,7 @@ export default function StandingsOverlay() {
   const leader = standings[0]
 
   return (
-    <div style={{ position: 'relative', transformOrigin: 'top left', transform: `scale(${scale})`, display: 'inline-block' }}>
-      <ResizeHandles overlayId="standings" />
+    <ResizeHandles overlayId="standings">
       <div className="overlay" style={{ width: 300 }}>
         <DragHandle overlayId="standings" label="Standings">
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
@@ -65,6 +62,6 @@ export default function StandingsOverlay() {
           )
         })}
       </div>
-    </div>
+    </ResizeHandles>
   )
 }

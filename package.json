@@ -6,9 +6,10 @@
   "scripts": {
     "start": "electron .",
     "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:electron\"",
-    "dev:renderer": "vite --port 5173",
+    "dev:renderer": "vite --port 5173 --strictPort",
     "dev:electron": "wait-on http://localhost:5173 && electron .",
     "build": "vite build && electron-builder",
+    "kill": "taskkill /F /IM electron.exe /T 2>nul & taskkill /F /IM ari_bridge.exe /T 2>nul & echo Done",
     "install-deps": "npm install"
   },
   "dependencies": {
@@ -27,7 +28,9 @@
   "build": {
     "appId": "com.aventa.ari",
     "productName": "ARI",
+    "icon": "icon.ico",
     "win": {
+      "icon": "icon.ico",
       "target": "nsis"
     }
   }

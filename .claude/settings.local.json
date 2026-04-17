@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find C:Projectsari -maxdepth 1 -type f -name *config* -o -name .*)",
+      "Bash(git push:*)",
+      "Bash(npm run:*)",
+      "Bash(taskkill /F /IM electron.exe /T)",
+      "Bash(taskkill /F /IM node.exe /T)",
+      "Bash(taskkill /F /IM ari_bridge.exe /T)",
+      "Bash(taskkill:*)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":517[0-9] \")",
+      "Bash(findstr LISTENING)",
+      "Bash(tasklist)",
+      "Bash(findstr /I \"electron.exe\\\\|ari_bridge.exe\")",
+      "Bash(findstr \":5173 \")",
+      "Bash(node:*)",
+      "Bash(ls C:/Projects/ari/*.png)"
+    ]
+  }
+}

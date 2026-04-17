@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useContext } from 'react'
+import { OverlayPreviewContext, PreviewTelemetryContext } from '../components/OverlayPreviewContext'
 
 // ─── Demo data (browser / no Electron) ───────────────────────────────────────
 const DEMO_DRIVERS = [
@@ -14,7 +15,7 @@ const DEMO_DRIVERS = [
 
 export const DRIVER_COLOURS = ['#F59E0B','#64748B','#3B82F6','#FF6B35','#E8001D','#22C55E','#A855F7','#EC4899']
 
-function buildDemoData(tick) {
+export function buildDemoData(tick) {
   const t = tick * 0.016
   const fuelLevel  = Math.max(0, 42 - tick * 0.008)
   const fuelPerLap = 2.41
@@ -47,6 +48,10 @@ function buildDemoData(tick) {
       fuel: { level: fuelLevel, perLap: fuelPerLap, lapsRemaining: fuelLevel / fuelPerLap, lapsToFinish: 18, needed: Math.max(0, (18 * fuelPerLap) - fuelLevel) },
       currentLap: 12, totalLaps: 30, sessionType: 'Race', lapsRemain: 18,
       trackTemp: 34.2, airTemp: 22.5, windSpeed: 8.4, windDir: 215, skies: 'Partly Cloudy',
+      sessionFlags: 0x04, sessionTimeRemain: Math.max(0, 1800 - tick * 0.5),
+      latAccel: Math.sin(lapPhase * 2) * 2.8, lonAccel: Math.cos(lapPhase) * 1.5,
+      ersRemaining: 0.7, ersDeployPct: 0.35,
+      onPitRoad: false, isInGarage: false,
       relative, standings: [...relative].sort((a, b) => a.position - b.position)
     }
   }
@@ -54,14 +59,23 @@ function buildDemoData(tick) {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useTelemetry() {
+  // All hooks must be called unconditionally — React rules.
+  // isPreview/previewData determine whether we use the shared preview data
+  // or subscribe to the real IPC telemetry channel.
+  const isPreview   = useContext(OverlayPreviewContext)
+  const previewData = useContext(PreviewTelemetryContext)
+
   const [data,      setData]      = useState(null)
   const [connected, setConnected] = useState(false)
   const [isDemo,    setIsDemo]    = useState(false)
-  const tickRef    = useRef(0)
+  const tickRef     = useRef(0)
   const intervalRef = useRef(null)
   const hasElectron = typeof window !== 'undefined' && window.ari
 
   useEffect(() => {
+    // Preview mode: data comes from PreviewTelemetryContext — no subscription needed.
+    if (isPreview) return
+
     if (hasElectron) {
       // Electron — receive real/demo data from main process
       window.ari.onTelemetry((incoming) => {
@@ -83,7 +97,10 @@ export function useTelemetry() {
       }, 16)
       return () => clearInterval(intervalRef.current)
     }
-  }, [hasElectron])
+  }, [hasElectron, isPreview])
+
+  // In preview mode, return the shared context data (hooks already ran above)
+  if (isPreview) return { data: previewData, connected: true, isDemo: true }
 
   return { data, connected, isDemo }
 }

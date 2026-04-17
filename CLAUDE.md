@@ -8,6 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Development (starts Vite dev server + Electron)
 npm run dev
 
+# Kill stale Electron/bridge processes before restarting
+npm run kill
+
 # Build for production (Vite build + electron-builder)
 npm run build
 
@@ -16,6 +19,8 @@ npm run dev:renderer
 ```
 
 There are no tests or linting configured in this project.
+
+**Dev port**: Vite is forced to port 5173 (`--strictPort`). If `npm run dev` fails with "port in use", run `npm run kill` first. Electron hardcodes `localhost:5173` — if Vite is on any other port, overlays load stale code silently.
 
 ## Architecture
 
@@ -72,8 +77,8 @@ The `pages/`, `telemetry/`, and `iracing_ui.py` files are a superseded Python-ba
 
 ## Critical iRacing Data Rules
 
-- **Brake**: iRacing sends 1=released, 0=fully pressed. Always invert: `display = 1 - Brake`
-- **Clutch**: iRacing sends 0=released, 1=fully pressed — use directly, no inversion
+- **Brake**: iRacing sends 1=released, 0=fully pressed. `iracing.js` inverts at source: `data.brake = 1 - Brake`. Overlays use `data.brake` directly — do NOT invert again.
+- **Clutch**: iRacing sends 0=released, 1=fully pressed — `iracing.js` passes through raw. Overlays use `data.clutch` directly, no inversion.
 - **Throttle**: 0=idle, 1=full — use directly, no inversion
 - **SteeringWheelAngle**: positive=left in iRacing — negate for display
 - **Lat/Lon GPS**: available in `.ibt` files but blocked in the live SDK — do not attempt to read live GPS coordinates
