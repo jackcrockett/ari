@@ -55,6 +55,7 @@ const OVERLAY_DEFAULTS = {
   gforce:        { x: 1070, y: 100,  width: 160, height: 160 },
   digiflag:      { x: 560,  y: 420,  width: 320, height: 190 },
   pitboxhelper:  { x: 560,  y: 680,  width: 260, height: 95  },
+  incident:      { x: 20,   y: 200,  width: 220, height: 220 },
 }
 
 function getSavedConfig(id) {

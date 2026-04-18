@@ -433,9 +433,10 @@ export const COLUMN_GROUPS = [
 // ─── Default column sets per overlay ─────────────────────────────────────────
 
 export const DEFAULT_COLUMNS = {
-  standings: ['position', 'colorDot', 'driverName', 'pitStatus', 'gapToLeader'],
-  relative:  ['position', 'colorDot', 'license', 'driverName', 'iRating', 'gap'],
+  standings:   ['position', 'colorDot', 'driverName', 'pitStatus', 'gapToLeader'],
+  relative:    ['position', 'colorDot', 'license', 'driverName', 'iRating', 'gap'],
+  leaderboard: ['position', 'colorDot', 'driverName', 'pitStatus', 'bestLapTime'],
 }
 
 // Overlays that support the column picker
-export const COLUMN_PICKER_OVERLAYS = new Set(['standings', 'relative'])
+export const COLUMN_PICKER_OVERLAYS = new Set(['standings', 'relative', 'leaderboard'])

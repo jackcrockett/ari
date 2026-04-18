@@ -29,6 +29,7 @@ import HeartRateOverlay from './components/overlays/HeartRateOverlay'
 import GForceOverlay from './components/overlays/GForceOverlay'
 import DigiflagOverlay from './components/overlays/DigiflagOverlay'
 import PitboxHelperOverlay from './components/overlays/PitboxHelperOverlay'
+import IncidentOverlay from './components/overlays/IncidentOverlay'
 import LayoutEditor from './components/LayoutEditor'
 
 function getRoute() {
@@ -73,6 +74,7 @@ export default function App() {
   if (route.startsWith('/overlay/gforce'))        return <GForceOverlay />
   if (route.startsWith('/overlay/digiflag'))      return <DigiflagOverlay />
   if (route.startsWith('/overlay/pitboxhelper'))  return <PitboxHelperOverlay />
+  if (route.startsWith('/overlay/incident'))      return <IncidentOverlay />
   if (route.startsWith('/layout-editor'))          return <LayoutEditor />
 
   return <ControlPanel />

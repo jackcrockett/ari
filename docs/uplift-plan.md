@@ -1,7 +1,7 @@
 # ARI Competitive Uplift Plan
 
 > Phase 2 of the uplift project. Produced after the Phase 1 audit.
-> Status: v0.6 shipped 2026-04-18. v0.7 shipped 2026-04-18. v0.8 shipped 2026-04-18. v0.9 next.
+> Status: v0.6-v0.9 shipped 2026-04-18. v0.10 next.
 
 ---
 
@@ -741,19 +741,18 @@ Each phase is independently shippable. All existing overlays must work after eve
 
 ### v0.9 -- Proximity Improvements + Bug Sweep (Tier 1-C)
 **Goal**: Make BlindSpot, Radar, and OvertakeAlert meaningfully more accurate.
+**Status**: SHIPPED 2026-04-18
 
-| Item | Work |
-|------|------|
-| BlindSpot: replace carIdx-parity with trackSurface + lapDistPct logic | `BlindSpotOverlay.jsx` |
-| Radar: tighten thresholds; use trackSurface | `RadarOverlay.jsx` |
-| OvertakeAlert: add class filtering; closing-rate display | `OvertakeAlertOverlay.jsx` |
-| PitboxHelper: use dynamic pit speed limit from YAML | `PitboxHelperOverlay.jsx` |
-| RaceSchedule: add stop count selector | `RaceScheduleOverlay.jsx` |
-| Migrate `LeaderboardOverlay` to column engine | `LeaderboardOverlay.jsx` |
-| Migrate `HorizontalStandingsOverlay` to column engine | `HorizontalStandingsOverlay.jsx` |
-| Incident overlay (display-only) | New `IncidentOverlay.jsx` |
-
-**Complexity**: M overall.
+| Item | Status | Notes |
+|------|--------|-------|
+| BlindSpot: trackSurface filter + lapDistPct split | Done | Filters pitting cars (trackSurface != 5); delta sign determines FWD/RR split; shows car number; threshold tightened to 1.2% |
+| Radar: trackSurface filter + tighter thresholds | Done | CLOSE_PCT 5%->4%, DANGER_PCT 1.5%->1.2%; skips pitting cars |
+| OvertakeAlert: class filtering + closing rate | Done | Different-class cars alerted at 6% threshold, same-class at 3%; smoothed closing rate (s/s) shown; pitting cars excluded; rate progress bar |
+| PitboxHelper: dynamic pit speed limit | Already done in v0.6 | |
+| RaceSchedule: stop count selector | Done | 1/2/3 stop buttons; pit windows update dynamically; all windows shown as mini chips |
+| Migrate LeaderboardOverlay to column engine | Done | Full DriverRow + settings IPC; default: position, colorDot, driverName, pitStatus, bestLapTime; settings icon |
+| Migrate HorizontalStandingsOverlay | Deferred | Format is cards-in-a-row, not compatible with DriverRow; migrate in v1.0 |
+| Incident overlay (display-only) | Done | New IncidentOverlay; sorted by incident count; NEW badge on freshly incremented counts; color coded 0/8+/17+ thresholds |
 
 ---
 

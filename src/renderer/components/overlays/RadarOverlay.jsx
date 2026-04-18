@@ -5,9 +5,9 @@ import ResizeHandles from '../ui/ResizeHandles'
 
 // Radar shows proximity by lapDistPct delta.
 // iRacing does not expose X/Z for other cars in live telemetry,
-// so we approximate: vertical axis = ahead/behind, horizontal = slight jitter by carIdx.
-const CLOSE_PCT = 0.05   // within 5% of lap = "on radar"
-const DANGER_PCT = 0.015 // within 1.5% = danger zone
+// so we approximate vertical = ahead/behind, horizontal = spread by carIdx.
+const CLOSE_PCT  = 0.04   // within 4% of lap = on radar
+const DANGER_PCT = 0.012  // within 1.2% = danger zone
 
 export default function RadarOverlay() {
   const { data } = useTelemetry()
@@ -55,32 +55,38 @@ export default function RadarOverlay() {
       ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI * 2)
       ctx.strokeStyle = 'rgba(232,0,29,0.35)'; ctx.lineWidth = 2; ctx.stroke()
 
-      // Other cars
+      // Other cars -- only those actually on track
       const playerPct = player?.lapDistPct ?? 0
-      drivers.filter(d => !d.isPlayer).forEach(d => {
-        let delta = d.lapDistPct - playerPct
-        // Wrap around track
-        if (delta > 0.5)  delta -= 1
-        if (delta < -0.5) delta += 1
-        if (Math.abs(delta) > CLOSE_PCT) return
+      drivers
+        .filter(d => {
+          if (d.isPlayer) return false
+          // Allow null trackSurface (demo data); filter out pitting cars
+          if (d.trackSurface != null && d.trackSurface !== 5) return false
+          return true
+        })
+        .forEach(d => {
+          let delta = d.lapDistPct - playerPct
+          if (delta > 0.5)  delta -= 1
+          if (delta < -0.5) delta += 1
+          if (Math.abs(delta) > CLOSE_PCT) return
 
-        const relY  = -(delta / CLOSE_PCT) * H * 0.42  // ahead = up
-        const jitter = ((d.carIdx * 137) % 11 - 5) / 5 * W * 0.15 // pseudo-random lateral offset
-        const px = cx + jitter
-        const py = cy + relY
+          const relY   = -(delta / CLOSE_PCT) * H * 0.42  // ahead = up
+          const jitter = ((d.carIdx * 137) % 11 - 5) / 5 * W * 0.15
+          const px = cx + jitter
+          const py = cy + relY
 
-        const isDanger = Math.abs(delta) < DANGER_PCT
-        const col = isDanger ? '#F59E0B' : (d.colour || '#64748B')
+          const isDanger = Math.abs(delta) < DANGER_PCT
+          const col = isDanger ? '#F59E0B' : (d.colour || '#64748B')
 
-        ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill()
-        ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2)
-        ctx.fillStyle = col; ctx.fill()
-        if (isDanger) {
-          ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2)
-          ctx.strokeStyle = '#F59E0B88'; ctx.lineWidth = 1.5; ctx.stroke()
-        }
-      })
+          ctx.beginPath(); ctx.arc(px, py, 5, 0, Math.PI * 2)
+          ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fill()
+          ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2)
+          ctx.fillStyle = col; ctx.fill()
+          if (isDanger) {
+            ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2)
+            ctx.strokeStyle = '#F59E0B88'; ctx.lineWidth = 1.5; ctx.stroke()
+          }
+        })
 
       animRef.current = requestAnimationFrame(draw)
     }

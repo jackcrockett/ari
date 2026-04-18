@@ -65,6 +65,7 @@ const OVERLAY_GROUPS = [
     overlays: [
       { id: 'advancedpanel', label: 'Advanced Panel',  description: 'Configurable multi-stat data panel' },
       { id: 'datablocks',    label: 'Data Blocks',     description: 'Individual freeform stat widgets' },
+      { id: 'incident',      label: 'Incidents',       description: 'Driver incident counts sorted by severity' },
     ]
   },
   {
