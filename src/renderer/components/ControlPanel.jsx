@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useTelemetry } from '../hooks/useTelemetry'
 import ariLogo from '../../../assets/ari_logo.png'
+import ColumnPicker from './ui/ColumnPicker'
+import { COLUMN_PICKER_OVERLAYS } from '../lib/columnDefs'
 
 const OVERLAY_GROUPS = [
   {
@@ -108,17 +110,25 @@ function TitleBarBtn({ children, onClick, label, isClose }) {
 
 export default function ControlPanel() {
   const { data, connected } = useTelemetry()
-  const [activeOverlays, setActiveOverlays] = useState({})
+  const [activeOverlays,  setActiveOverlays]  = useState({})
+  const [settingsOverlay, setSettingsOverlay] = useState(null) // id of overlay whose columns are open
   const hasElectron = typeof window !== 'undefined' && window.ari
 
   // Restore persisted active-overlay state on mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (!hasElectron) return
     window.ari.getActiveOverlays().then(ids => {
       const state = {}
       ids.forEach(id => { state[id] = true })
       setActiveOverlays(state)
     })
+  }, [hasElectron])
+
+  // Listen for overlay settings requests (gear icon in overlay DragHandle)
+  useEffect(() => {
+    if (!hasElectron) return
+    window.ari.onOpenSettings(id => setSettingsOverlay(id))
+    return () => window.ari.removeOpenSettingsListener()
   }, [hasElectron])
 
   const toggleOverlay = async (id) => {
@@ -257,59 +267,72 @@ export default function ControlPanel() {
         </div>
       )}
 
-      {/* Overlay toggles */}
-      <div style={{ padding: '14px 18px 8px', flexShrink: 0 }}>
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>
-          Overlays
+      {/* Column picker -- shown when a settings gear icon is clicked in an overlay */}
+      {settingsOverlay && COLUMN_PICKER_OVERLAYS.has(settingsOverlay) ? (
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <ColumnPicker
+            overlayId={settingsOverlay}
+            overlayLabel={OVERLAYS.find(o => o.id === settingsOverlay)?.label ?? settingsOverlay}
+            onBack={() => setSettingsOverlay(null)}
+          />
         </div>
-      </div>
-
-      <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto' }}>
-        {OVERLAY_GROUPS.map(group => (
-          <div key={group.label}>
-            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.12em', padding: '10px 0 4px' }}>
-              {group.label}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {group.overlays.map(({ id, label, description }) => {
-                const active = activeOverlays[id]
-                return (
-                  <div
-                    key={id}
-                    onClick={() => toggleOverlay(id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      padding: '8px 10px',
-                      background: active ? 'rgba(232,0,29,0.08)' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${active ? 'rgba(232,0,29,0.3)' : 'rgba(255,255,255,0.06)'}`,
-                      borderRadius: 6, cursor: 'pointer', transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div style={{
-                      width: 28, height: 16,
-                      background: active ? '#E8001D' : 'rgba(255,255,255,0.1)',
-                      borderRadius: 8, position: 'relative', flexShrink: 0, transition: 'background 0.2s'
-                    }}>
-                      <div style={{
-                        position: 'absolute', top: 2, left: active ? 14 : 2,
-                        width: 12, height: 12, background: '#fff', borderRadius: '50%',
-                        transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)'
-                      }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: active ? '#fff' : 'rgba(255,255,255,0.7)', marginBottom: 1 }}>{label}</div>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)' }}>{description}</div>
-                    </div>
-                    {active && (
-                      <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, fontWeight: 700, color: '#E8001D', background: 'rgba(232,0,29,0.12)', padding: '2px 5px', borderRadius: 3, letterSpacing: '0.08em' }}>ON</span>
-                    )}
-                  </div>
-                )
-              })}
+      ) : (
+        <>
+          {/* Overlay toggles */}
+          <div style={{ padding: '14px 18px 8px', flexShrink: 0 }}>
+            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>
+              Overlays
             </div>
           </div>
-        ))}
-      </div>
+
+          <div style={{ padding: '0 18px', display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto' }}>
+            {OVERLAY_GROUPS.map(group => (
+              <div key={group.label}>
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.12em', padding: '10px 0 4px' }}>
+                  {group.label}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {group.overlays.map(({ id, label, description }) => {
+                    const active = activeOverlays[id]
+                    return (
+                      <div
+                        key={id}
+                        onClick={() => toggleOverlay(id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 10px',
+                          background: active ? 'rgba(232,0,29,0.08)' : 'rgba(255,255,255,0.03)',
+                          border: `1px solid ${active ? 'rgba(232,0,29,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                          borderRadius: 6, cursor: 'pointer', transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <div style={{
+                          width: 28, height: 16,
+                          background: active ? '#E8001D' : 'rgba(255,255,255,0.1)',
+                          borderRadius: 8, position: 'relative', flexShrink: 0, transition: 'background 0.2s'
+                        }}>
+                          <div style={{
+                            position: 'absolute', top: 2, left: active ? 14 : 2,
+                            width: 12, height: 12, background: '#fff', borderRadius: '50%',
+                            transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)'
+                          }} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 500, color: active ? '#fff' : 'rgba(255,255,255,0.7)', marginBottom: 1 }}>{label}</div>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)' }}>{description}</div>
+                        </div>
+                        {active && (
+                          <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, fontWeight: 700, color: '#E8001D', background: 'rgba(232,0,29,0.12)', padding: '2px 5px', borderRadius: 3, letterSpacing: '0.08em' }}>ON</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Footer */}
       <div style={{

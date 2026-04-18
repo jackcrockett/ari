@@ -208,6 +208,16 @@ ipcMain.handle('get-overlay-scale', (event, id) => {
 })
 
 // ─── IPC: Overlay content settings ─────────────────────────────────────────
+// ─── IPC: Open settings in control panel ────────────────────────────────────
+ipcMain.handle('request-open-settings', (event, id) => {
+  if (controlWindow && !controlWindow.isDestroyed()) {
+    if (controlWindow.isMinimized()) controlWindow.restore()
+    controlWindow.focus()
+    controlWindow.webContents.send('open-overlay-settings', id)
+  }
+})
+
+// ─── IPC: Overlay content settings ─────────────────────────────────────────
 ipcMain.handle('get-overlay-settings', (event, id) => {
   return store ? store.get('overlay.' + id + '.content') || null : null
 })

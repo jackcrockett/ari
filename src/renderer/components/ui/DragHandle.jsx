@@ -11,7 +11,7 @@ const GRID = 8
  * Drag origin and committed offset are stored in refs — no state updates
  * during drag, so no re-renders while dragging.
  */
-export default function DragHandle({ overlayId, label, children }) {
+export default function DragHandle({ overlayId, label, children, onSettings }) {
   const isPreview   = useContext(OverlayPreviewContext)
   const handleRef   = useRef(null)
   const dragState   = useRef(null)   // null = not dragging
@@ -128,6 +128,25 @@ export default function DragHandle({ overlayId, label, children }) {
       {/* Right slot */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         {children}
+        {onSettings && (
+          <button
+            onMouseDown={e => e.stopPropagation()}
+            onClick={e => { e.stopPropagation(); onSettings() }}
+            title="Column settings"
+            style={{
+              width: 18, height: 18,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'none', border: 'none',
+              color: 'rgba(255,255,255,0.25)', cursor: 'pointer',
+              padding: 0, borderRadius: 3,
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <circle cx="5.5" cy="5.5" r="2" stroke="currentColor" strokeWidth="1.2" />
+              <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" strokeWidth="1.2" strokeDasharray="2.2 1.8" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   )

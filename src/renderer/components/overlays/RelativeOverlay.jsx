@@ -1,12 +1,33 @@
-import React, { useMemo } from 'react'
-import { useTelemetry, formatGap, licenseColor } from '../../hooks/useTelemetry'
+import React, { useState, useEffect, useMemo } from 'react'
+import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
-
-const DRIVER_COLOURS = ['#F59E0B','#64748B','#3B82F6','#FF6B35','#E8001D','#22C55E','#A855F7','#EC4899']
+import DriverRow from '../ui/DriverRow'
+import { DEFAULT_COLUMNS } from '../../lib/columnDefs'
 
 export default function RelativeOverlay() {
-  const { data, connected, isDemo } = useTelemetry()
+  const { data, connected } = useTelemetry()
+  const hasElectron = typeof window !== 'undefined' && window.ari
+
+  const [columns, setColumns] = useState(DEFAULT_COLUMNS.relative)
+
+  // Load persisted column settings on mount
+  useEffect(() => {
+    if (!hasElectron) return
+    window.ari.getOverlaySettings('relative').then(s => {
+      if (s?.columns?.length) setColumns(s.columns)
+    })
+  }, [hasElectron])
+
+  // Live-update when user changes settings in the column picker
+  useEffect(() => {
+    if (!hasElectron) return
+    window.ari.onOverlaySettingsChanged((id, s) => {
+      if (id !== 'relative') return
+      if (s?.columns?.length) setColumns(s.columns)
+    })
+    return () => window.ari.removeSettingsChangeListener()
+  }, [hasElectron])
 
   const drivers = useMemo(() => {
     if (!data?.relative) return []
@@ -16,6 +37,10 @@ export default function RelativeOverlay() {
     const start = Math.max(0, selfIdx - 2)
     return sorted.slice(start, start + 5)
   }, [data])
+
+  const openSettings = () => {
+    if (hasElectron) window.ari.requestOpenSettings('relative')
+  }
 
   if (!data) {
     return (
@@ -28,47 +53,24 @@ export default function RelativeOverlay() {
   return (
     <ResizeHandles overlayId="relative">
       <div className="overlay" style={{ width: 290 }}>
-        <DragHandle overlayId="relative" label="Relative">
-          <span className="live-badge" style={{ background: connected ? "rgba(34,197,94,0.15)" : "rgba(245,158,11,0.15)", color: connected ? "#22C55E" : "#F59E0B" }}>{connected ? "LIVE" : "DEMO"}</span>
+        <DragHandle overlayId="relative" label="Relative" onSettings={openSettings}>
+          <span className="live-badge" style={{
+            background: connected ? 'rgba(34,197,94,0.15)' : 'rgba(245,158,11,0.15)',
+            color: connected ? '#22C55E' : '#F59E0B',
+          }}>
+            {connected ? 'LIVE' : 'DEMO'}
+          </span>
         </DragHandle>
 
-        {drivers.map((driver, i) => {
-          const colour = driver.colour || DRIVER_COLOURS[driver.carIdx % DRIVER_COLOURS.length]
-          const gap = driver.isPlayer ? null : driver.gapSeconds
-          const gapStr = gap === null ? '—' : formatGap(gap)
-          const isAhead = gap !== null && gap < 0
-
-          return (
-            <div key={driver.carIdx} style={{
-              display: 'flex', alignItems: 'center', padding: '5px 10px', gap: 7,
-              background: driver.isPlayer ? 'rgba(232,0,29,0.08)' : 'transparent',
-              borderBottom: i < drivers.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-              borderLeft: driver.isPlayer ? '2px solid #E8001D' : '2px solid transparent',
-            }}>
-              <span style={{ fontFamily: 'var(--font-data)', fontSize: 11, fontWeight: 600, color: driver.isPlayer ? '#E8001D' : 'rgba(255,255,255,0.3)', width: 18, flexShrink: 0 }}>
-                {driver.position}
-              </span>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: colour, flexShrink: 0 }} />
-              <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 700, background: licenseColor(driver.licenseString), color: '#fff', padding: '1px 4px', borderRadius: 2, flexShrink: 0 }}>
-                {driver.licenseString}
-              </span>
-              <span style={{ fontFamily: 'var(--font-data)', fontSize: 12, fontWeight: driver.isPlayer ? 600 : 500, color: driver.isPlayer ? '#fff' : 'rgba(255,255,255,0.75)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {driver.driverName}
-              </span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(255,255,255,0.25)', flexShrink: 0 }}>
-                {driver.iRating >= 1000 ? `${(driver.iRating/1000).toFixed(1)}k` : driver.iRating}
-              </span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 500, color: driver.isPlayer ? 'rgba(255,255,255,0.4)' : isAhead ? '#94D2BD' : '#F59E0B', minWidth: 52, textAlign: 'right', flexShrink: 0 }}>
-                {driver.isPlayer ? '● YOU' : gapStr}
-              </span>
-              {driver.onPitRoad && (
-                <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 700, color: '#F59E0B', background: 'rgba(245,158,11,0.12)', padding: '1px 4px', borderRadius: 2, flexShrink: 0 }}>
-                  PIT
-                </span>
-              )}
-            </div>
-          )
-        })}
+        {drivers.map((driver, i) => (
+          <DriverRow
+            key={driver.carIdx}
+            driver={driver}
+            columns={columns}
+            isLast={i === drivers.length - 1}
+            data={data}
+          />
+        ))}
       </div>
     </ResizeHandles>
   )

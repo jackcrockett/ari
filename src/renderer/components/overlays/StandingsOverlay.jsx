@@ -1,17 +1,45 @@
-import React, { useMemo } from 'react'
-import { useTelemetry, formatGap } from '../../hooks/useTelemetry'
+import React, { useState, useEffect, useMemo } from 'react'
+import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
-
-const DRIVER_COLOURS = ['#F59E0B','#64748B','#3B82F6','#FF6B35','#E8001D','#22C55E','#A855F7','#EC4899']
+import DriverRow from '../ui/DriverRow'
+import { DEFAULT_COLUMNS } from '../../lib/columnDefs'
 
 export default function StandingsOverlay() {
-  const { data, connected, isDemo } = useTelemetry()
+  const { data } = useTelemetry()
+  const hasElectron = typeof window !== 'undefined' && window.ari
+
+  const [columns,  setColumns]  = useState(DEFAULT_COLUMNS.standings)
+  const [rowCount, setRowCount] = useState(10)
+
+  // Load persisted column settings on mount
+  useEffect(() => {
+    if (!hasElectron) return
+    window.ari.getOverlaySettings('standings').then(s => {
+      if (s?.columns?.length) setColumns(s.columns)
+      if (s?.rowCount)        setRowCount(s.rowCount)
+    })
+  }, [hasElectron])
+
+  // Live-update when user changes settings in the column picker
+  useEffect(() => {
+    if (!hasElectron) return
+    window.ari.onOverlaySettingsChanged((id, s) => {
+      if (id !== 'standings') return
+      if (s?.columns?.length) setColumns(s.columns)
+      if (s?.rowCount)        setRowCount(s.rowCount)
+    })
+    return () => window.ari.removeSettingsChangeListener()
+  }, [hasElectron])
 
   const standings = useMemo(() => {
     if (!data?.standings) return []
-    return data.standings.slice(0, 10)
-  }, [data])
+    return data.standings.slice(0, rowCount)
+  }, [data, rowCount])
+
+  const openSettings = () => {
+    if (hasElectron) window.ari.requestOpenSettings('standings')
+  }
 
   if (!data) {
     return (
@@ -21,46 +49,25 @@ export default function StandingsOverlay() {
     )
   }
 
-  const leader = standings[0]
-
   return (
     <ResizeHandles overlayId="standings">
       <div className="overlay" style={{ width: 300 }}>
-        <DragHandle overlayId="standings" label="Standings">
+        <DragHandle overlayId="standings" label="Standings" onSettings={openSettings}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
             Lap <strong style={{ color: '#fff' }}>{data.currentLap}</strong>
             {data.totalLaps ? ` / ${data.totalLaps}` : ''}
           </span>
         </DragHandle>
 
-        {standings.map((driver, i) => {
-          const colour = driver.colour || DRIVER_COLOURS[driver.carIdx % DRIVER_COLOURS.length]
-          const isLeader = i === 0
-          const gapToLeader = leader ? (driver.gapSeconds - leader.gapSeconds) : null
-
-          return (
-            <div key={driver.carIdx} style={{
-              display: 'flex', alignItems: 'center', padding: '4px 10px', gap: 7,
-              background: driver.isPlayer ? 'rgba(232,0,29,0.08)' : 'transparent',
-              borderBottom: i < standings.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-              borderLeft: driver.isPlayer ? '2px solid #E8001D' : '2px solid transparent',
-            }}>
-              <span style={{ fontFamily: 'var(--font-data)', fontSize: 11, fontWeight: 600, color: driver.isPlayer ? '#E8001D' : 'rgba(255,255,255,0.3)', width: 18, flexShrink: 0, textAlign: 'right' }}>
-                {driver.position}
-              </span>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: colour, flexShrink: 0 }} />
-              <span style={{ fontFamily: 'var(--font-data)', fontSize: 12, fontWeight: driver.isPlayer ? 600 : 400, color: driver.isPlayer ? '#fff' : 'rgba(255,255,255,0.72)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {driver.driverName}
-              </span>
-              {driver.onPitRoad && (
-                <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 700, color: '#F59E0B', background: 'rgba(245,158,11,0.12)', padding: '1px 4px', borderRadius: 2, flexShrink: 0 }}>PIT</span>
-              )}
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: isLeader ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.5)', minWidth: 54, textAlign: 'right', flexShrink: 0 }}>
-                {isLeader ? 'Leader' : gapToLeader !== null ? formatGap(gapToLeader) : '—'}
-              </span>
-            </div>
-          )
-        })}
+        {standings.map((driver, i) => (
+          <DriverRow
+            key={driver.carIdx}
+            driver={driver}
+            columns={columns}
+            isLast={i === standings.length - 1}
+            data={data}
+          />
+        ))}
       </div>
     </ResizeHandles>
   )

@@ -47,4 +47,9 @@ contextBridge.exposeInMainWorld('ari', {
   saveOverlaySettings:         (id, c)    => ipcRenderer.invoke('save-overlay-settings', id, c),
   onOverlaySettingsChanged:    (cb)       => ipcRenderer.on('overlay-settings-changed', (e, id, c) => cb(id, c)),
   removeSettingsChangeListener: ()        => ipcRenderer.removeAllListeners('overlay-settings-changed'),
+
+  // Column picker -- overlay requests control panel to open settings for an overlay
+  requestOpenSettings:         (id)       => ipcRenderer.invoke('request-open-settings', id),
+  onOpenSettings:              (cb)       => ipcRenderer.on('open-overlay-settings', (e, id) => cb(id)),
+  removeOpenSettingsListener:  ()         => ipcRenderer.removeAllListeners('open-overlay-settings'),
 })
