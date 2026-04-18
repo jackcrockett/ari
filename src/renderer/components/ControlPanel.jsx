@@ -114,11 +114,13 @@ const PRESET_LABELS = { practice: 'Practice', qualify: 'Qualify', race: 'Race' }
 
 export default function ControlPanel() {
   const { data, connected } = useTelemetry()
-  const [activeOverlays,  setActiveOverlays]  = useState({})
-  const [settingsOverlay, setSettingsOverlay] = useState(null)
-  const [presets,         setPresets]         = useState({})
-  const [autoPreset,      setAutoPresetState] = useState(false)
+  const [activeOverlays,   setActiveOverlays]  = useState({})
+  const [settingsOverlay,  setSettingsOverlay] = useState(null)
+  const [presets,          setPresets]         = useState({})
+  const [autoPreset,       setAutoPresetState] = useState(false)
   const [currentPresetKey, setCurrentPresetKey] = useState(null)
+  const [networkStatus,    setNetworkStatus]   = useState({ active: false, available: true, urls: [], clients: 0 })
+  const [vrMode,           setVrModeState]     = useState(false)
   const hasElectron = typeof window !== 'undefined' && window.ari
 
   // Restore persisted active-overlay state on mount
@@ -190,6 +192,36 @@ export default function ControlPanel() {
     const next = !autoPreset
     setAutoPresetState(next)
     if (hasElectron) await window.ari.setAutoPreset(next)
+  }
+
+  // Load network status and VR mode on mount; listen for live updates
+  useEffect(() => {
+    if (!hasElectron) return
+    window.ari.getNetworkStatus().then(s => setNetworkStatus(s))
+    window.ari.getVrMode().then(v => setVrModeState(v || false))
+    window.ari.onNetworkStatus(s => setNetworkStatus(s))
+    return () => window.ari.removeNetworkStatusListener()
+  }, [hasElectron])
+
+  const toggleNetwork = async () => {
+    if (networkStatus.active) {
+      await window.ari.stopHttpServer()
+    } else {
+      const result = await window.ari.startHttpServer(7001)
+      if (result?.error) console.error('[ARI] HTTP server error:', result.error)
+      const s = await window.ari.getNetworkStatus()
+      setNetworkStatus(s)
+    }
+  }
+
+  const toggleVrMode = async () => {
+    const next = !vrMode
+    setVrModeState(next)
+    if (hasElectron) await window.ari.setVrMode(next)
+  }
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard?.writeText(text).catch(() => {})
   }
 
   const toggleOverlay = async (id) => {
@@ -417,6 +449,91 @@ export default function ControlPanel() {
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* Network + VR */}
+      <div style={{ padding: '8px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+
+          {/* Network Stream toggle */}
+          <div style={{
+            flex: 1, padding: '6px 8px', borderRadius: 5,
+            background: networkStatus.active ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.03)',
+            border: `1px solid ${networkStatus.active ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.07)'}`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: networkStatus.active ? 5 : 0 }}>
+              <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', color: networkStatus.active ? '#22C55E' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
+                Network
+              </span>
+              <button
+                onClick={toggleNetwork}
+                style={{
+                  width: 24, height: 13, borderRadius: 7, position: 'relative',
+                  background: networkStatus.active ? '#22C55E' : 'rgba(255,255,255,0.12)',
+                  border: 'none', cursor: 'pointer', padding: 0, transition: 'background 0.2s',
+                }}
+              >
+                <div style={{
+                  position: 'absolute', top: 2, left: networkStatus.active ? 13 : 2,
+                  width: 9, height: 9, borderRadius: '50%', background: '#fff',
+                  transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
+            {networkStatus.active && networkStatus.urls.length > 0 && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'rgba(255,255,255,0.5)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {networkStatus.urls[0].http}
+                  </span>
+                  <button
+                    onClick={() => copyToClipboard(networkStatus.urls[0].http)}
+                    style={{ fontSize: 7, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 2, padding: '1px 4px', cursor: 'pointer', color: 'rgba(255,255,255,0.5)', flexShrink: 0, fontFamily: 'var(--font-data)', letterSpacing: '0.04em' }}
+                  >
+                    COPY
+                  </button>
+                </div>
+                <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>
+                  {networkStatus.clients} client{networkStatus.clients !== 1 ? 's' : ''}
+                </span>
+              </>
+            )}
+            {networkStatus.active && networkStatus.urls.length === 0 && (
+              <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>Starting...</span>
+            )}
+          </div>
+
+          {/* VR Mode toggle */}
+          <div style={{
+            flex: 1, padding: '6px 8px', borderRadius: 5,
+            background: vrMode ? 'rgba(192,132,252,0.06)' : 'rgba(255,255,255,0.03)',
+            border: `1px solid ${vrMode ? 'rgba(192,132,252,0.2)' : 'rgba(255,255,255,0.07)'}`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', color: vrMode ? '#C084FC' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
+                VR Mode
+              </span>
+              <button
+                onClick={toggleVrMode}
+                style={{
+                  width: 24, height: 13, borderRadius: 7, position: 'relative',
+                  background: vrMode ? '#C084FC' : 'rgba(255,255,255,0.12)',
+                  border: 'none', cursor: 'pointer', padding: 0, transition: 'background 0.2s',
+                }}
+              >
+                <div style={{
+                  position: 'absolute', top: 2, left: vrMode ? 13 : 2,
+                  width: 9, height: 9, borderRadius: '50%', background: '#fff',
+                  transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
+            <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'rgba(255,255,255,0.3)', lineHeight: 1.3 }}>
+              {vrMode ? 'OVR capture' : 'Screen overlay'}
+            </span>
+          </div>
+
         </div>
       </div>
 

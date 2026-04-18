@@ -13,7 +13,8 @@
     "install-deps": "npm install"
   },
   "dependencies": {
-    "electron-store": "^8.1.0"
+    "electron-store": "^8.1.0",
+    "ws": "^8.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",

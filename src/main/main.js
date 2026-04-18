@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain, screen } = require('electron')
 const { scanIbtFiles, enableIRacingTelemetry } = require('./trackmap-builder')
 const path = require('path')
-const IRacingSDK = require('./iracing')
+const IRacingSDK    = require('./iracing')
+const AriHttpServer = require('./httpServer')
 
 const isDev = !app.isPackaged
 
@@ -11,6 +12,7 @@ let overlayWindows     = {}
 let iracingSDK         = null
 let Store              = null
 let lastSessionType    = null   // tracks last seen sessionType for change detection
+let httpServer         = null   // AriHttpServer instance, created on demand
 
 async function loadStore() {
   try {
@@ -140,7 +142,8 @@ function createOverlayWindow(id, config) {
   overlayWindows[id] = win
   win.once('ready-to-show', () => {
     win.show()
-    win.setAlwaysOnTop(true, 'screen-saver')
+    const vrMode = store ? store.get('app.vrMode') || false : false
+    win.setAlwaysOnTop(true, vrMode ? 'normal' : 'screen-saver')
     console.log('[ARI] Overlay shown:', id, 'bounds:', JSON.stringify(win.getBounds()))
   })
   return win
@@ -320,6 +323,60 @@ ipcMain.handle('save-preset', (event, key, preset) => {
   store.set('app.presets', all)
 })
 
+// ─── IPC: Network streaming ─────────────────────────────────────────────────
+ipcMain.handle('get-network-status', () => {
+  if (!httpServer) return { active: false, available: false, urls: [], clients: 0 }
+  return {
+    active:    httpServer.active,
+    available: httpServer.available,
+    urls:      httpServer.active ? httpServer.getUrls() : [],
+    clients:   httpServer.clientCount,
+  }
+})
+
+ipcMain.handle('start-http-server', async (event, port = 7001) => {
+  if (!httpServer) {
+    httpServer = new AriHttpServer({
+      isDev:   isDev,
+      appPath: app.getAppPath(),
+      onClientCountChange: (n) => {
+        if (controlWindow && !controlWindow.isDestroyed())
+          controlWindow.webContents.send('network-status', {
+            active: true, available: true,
+            urls: httpServer.getUrls(), clients: n,
+          })
+      },
+    })
+  }
+  if (httpServer.active) return { ok: true }
+  try {
+    await httpServer.start(port)
+    if (store) store.set('app.networkEnabled', true)
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: e.message }
+  }
+})
+
+ipcMain.handle('stop-http-server', async () => {
+  if (httpServer) await httpServer.stop()
+  if (store) store.set('app.networkEnabled', false)
+  if (controlWindow && !controlWindow.isDestroyed())
+    controlWindow.webContents.send('network-status', { active: false, available: !!httpServer?.available, urls: [], clients: 0 })
+})
+
+// ─── IPC: VR mode ───────────────────────────────────────────────────────────
+ipcMain.handle('get-vr-mode', () => store ? store.get('app.vrMode') || false : false)
+
+ipcMain.handle('set-vr-mode', (event, enabled) => {
+  if (store) store.set('app.vrMode', enabled)
+  const level = enabled ? 'normal' : 'screen-saver'
+  Object.values(overlayWindows).forEach(win => {
+    if (win && !win.isDestroyed()) win.setAlwaysOnTop(true, level)
+  })
+  console.log('[ARI] VR mode:', enabled ? 'ON (normal level)' : 'OFF (screen-saver level)')
+})
+
 // ─── Preset helpers ─────────────────────────────────────────────────────────
 function toPresetKey(sessionType) {
   const t = (sessionType || '').toLowerCase()
@@ -393,6 +450,9 @@ function broadcastTelemetry(data) {
   Object.values(overlayWindows).forEach(win => {
     if (win && !win.isDestroyed()) win.webContents.send('telemetry-update', data)
   })
+
+  // Broadcast to remote WebSocket clients
+  if (httpServer) httpServer.broadcast(data)
 }
 
 // ─── App Lifecycle ──────────────────────────────────────────────────────────
@@ -409,6 +469,22 @@ app.whenReady().then(async () => {
     })
   }
 
+  // Auto-restore network server if it was running last session
+  if (store && store.get('app.networkEnabled')) {
+    httpServer = new AriHttpServer({
+      isDev:   isDev,
+      appPath: app.getAppPath(),
+      onClientCountChange: (n) => {
+        if (controlWindow && !controlWindow.isDestroyed())
+          controlWindow.webContents.send('network-status', {
+            active: true, available: true,
+            urls: httpServer.getUrls(), clients: n,
+          })
+      },
+    })
+    httpServer.start().catch(e => console.warn('[ARI] HTTP server auto-start failed:', e.message))
+  }
+
   iracingSDK = new IRacingSDK(broadcastTelemetry)
   iracingSDK.start()
 
@@ -422,5 +498,6 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   if (iracingSDK) iracingSDK.stop()
+  if (httpServer)  httpServer.stop()
   if (process.platform !== 'darwin') app.quit()
 })

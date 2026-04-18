@@ -65,6 +65,16 @@ export function buildDemoData(tick) {
   }
 }
 
+// ─── WebSocket URL detection ──────────────────────────────────────────────────
+// Checks window.__ARI_WS__ (injected by httpServer.js) or ?ws= query param.
+function getWsUrl() {
+  if (typeof window === 'undefined') return null
+  if (window.__ARI_WS__) return window.__ARI_WS__
+  const param = new URLSearchParams(window.location.search).get('ws')
+  if (!param) return null
+  return param.startsWith('ws') ? param : `ws://${param}/telemetry`
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useTelemetry() {
   // All hooks must be called unconditionally — React rules.
@@ -79,6 +89,7 @@ export function useTelemetry() {
   const tickRef     = useRef(0)
   const intervalRef = useRef(null)
   const hasElectron = typeof window !== 'undefined' && window.ari
+  const wsUrl       = getWsUrl()
 
   useEffect(() => {
     // Preview mode: data comes from PreviewTelemetryContext — no subscription needed.
@@ -94,6 +105,37 @@ export function useTelemetry() {
         if (incoming.telemetry) setData(incoming.telemetry)
       })
       return () => window.ari.removeTelemetryListener()
+    } else if (wsUrl) {
+      // Remote WebSocket mode -- browser on second PC / phone connecting to ARI server
+      let ws
+      let reconnectTimer
+
+      const connect = () => {
+        ws = new WebSocket(wsUrl)
+
+        ws.onopen    = () => console.log('[ARI] WS connected:', wsUrl)
+        ws.onmessage = (e) => {
+          try {
+            const incoming = JSON.parse(e.data)
+            const isLive = incoming.connected && !incoming.demo
+            setConnected(isLive)
+            setIsDemo(!isLive)
+            if (incoming.telemetry) setData(incoming.telemetry)
+          } catch (_) {}
+        }
+        ws.onclose = () => {
+          setConnected(false)
+          // Reconnect after 2s
+          reconnectTimer = setTimeout(connect, 2000)
+        }
+        ws.onerror = () => ws.close()
+      }
+
+      connect()
+      return () => {
+        clearTimeout(reconnectTimer)
+        if (ws) ws.close()
+      }
     } else {
       // Browser — pure demo mode
       intervalRef.current = setInterval(() => {
@@ -105,7 +147,7 @@ export function useTelemetry() {
       }, 16)
       return () => clearInterval(intervalRef.current)
     }
-  }, [hasElectron, isPreview])
+  }, [hasElectron, isPreview, wsUrl])
 
   // In preview mode, return the shared context data (hooks already ran above)
   if (isPreview) return { data: previewData, connected: true, isDemo: true }

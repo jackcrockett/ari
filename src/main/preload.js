@@ -63,4 +63,15 @@ contextBridge.exposeInMainWorld('ari', {
   removeSessionTypeListener:     ()            => ipcRenderer.removeAllListeners('session-type-change'),
   onPresetApplied:               (cb)          => ipcRenderer.on('preset-applied', (e, key, p) => cb(key, p)),
   removePresetAppliedListener:   ()            => ipcRenderer.removeAllListeners('preset-applied'),
+
+  // Network streaming
+  getNetworkStatus:              ()            => ipcRenderer.invoke('get-network-status'),
+  startHttpServer:               (port)        => ipcRenderer.invoke('start-http-server', port),
+  stopHttpServer:                ()            => ipcRenderer.invoke('stop-http-server'),
+  onNetworkStatus:               (cb)          => ipcRenderer.on('network-status', (e, s) => cb(s)),
+  removeNetworkStatusListener:   ()            => ipcRenderer.removeAllListeners('network-status'),
+
+  // VR mode
+  getVrMode:                     ()            => ipcRenderer.invoke('get-vr-mode'),
+  setVrMode:                     (enabled)     => ipcRenderer.invoke('set-vr-mode', enabled),
 })

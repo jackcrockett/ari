@@ -1,7 +1,7 @@
 # ARI Competitive Uplift Plan
 
 > Phase 2 of the uplift project. Produced after the Phase 1 audit.
-> Status: v0.6-v0.9 shipped 2026-04-18. v0.10 next.
+> Status: v0.6-v0.10 shipped 2026-04-18. v1.0 next.
 
 ---
 
@@ -758,17 +758,20 @@ Each phase is independently shippable. All existing overlays must work after eve
 
 ### v0.10 -- Network Streaming (Tier 2-B) + VR Mode (Tier 2-A)
 **Goal**: Ship the dual-PC use case and OVR Toolkit compatibility.
+**Status**: SHIPPED 2026-04-18
 
-| Item | Work |
-|------|------|
-| `httpServer.js` -- Express + WebSocket server | New file |
-| `useTelemetry.js` -- WebSocket data source mode | Modified |
-| Network Mode UI in ControlPanel | Modified |
-| QR code for phone access (use a pure-JS QR library) | Modified |
-| VR Mode per-overlay toggle | `main.js` + `ControlPanel.jsx` |
-| `createOverlayWindow` refactor to support vrMode flag | `main.js` |
+| Item | Status | Notes |
+|------|--------|-------|
+| `httpServer.js` -- HTTP + WebSocket server | Done | Uses `ws` npm package; graceful degradation if not installed; serves prod dist with `__ARI_WS__` injected; dev mode shows info page |
+| `useTelemetry.js` -- WebSocket data source mode | Done | `getWsUrl()` checks `window.__ARI_WS__` then `?ws=` query param; auto-reconnects on close (2s) |
+| Network Mode UI in ControlPanel | Done | Two side-by-side cards (Network + VR); toggle to start/stop server; URL display with COPY button; live client count |
+| QR code | Deferred | Skipped QR library dependency; URL is copy-able instead |
+| VR Mode global toggle | Done | `app.vrMode` in store; `alwaysOnTop` switches between `screen-saver` and `normal`; restored on startup |
+| `createOverlayWindow` respects vrMode store value | Done | All windows created with correct alwaysOnTop level at launch |
+| `ws` added to package.json dependencies | Done | `"ws": "^8.0.0"` |
+| Auto-restore network server on startup | Done | Reads `app.networkServer.enabled` from store; calls `httpServer.start()` if true |
 
-**Complexity**: M. The WebSocket telemetry path reuses the existing `buildTelemetry` output unchanged.
+**Deviations**: No QR code library (avoided adding another dependency; copy-able URL serves the same use case). VR mode implemented as a global setting rather than per-overlay toggle (simpler and more practical for OVR Toolkit capture workflows). Server port fixed to 7001 (configurable in code; no UI for port yet).
 
 ---
 
