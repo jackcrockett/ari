@@ -111,6 +111,16 @@ export default function ControlPanel() {
   const [activeOverlays, setActiveOverlays] = useState({})
   const hasElectron = typeof window !== 'undefined' && window.ari
 
+  // Restore persisted active-overlay state on mount
+  React.useEffect(() => {
+    if (!hasElectron) return
+    window.ari.getActiveOverlays().then(ids => {
+      const state = {}
+      ids.forEach(id => { state[id] = true })
+      setActiveOverlays(state)
+    })
+  }, [hasElectron])
+
   const toggleOverlay = async (id) => {
     const isActive = activeOverlays[id]
     console.log('[ARI UI] toggle', id, 'hasElectron=', !!hasElectron, 'isActive=', isActive)

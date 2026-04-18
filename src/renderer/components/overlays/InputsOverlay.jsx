@@ -154,8 +154,8 @@ export default function InputsOverlay() {
   const throttle  = data?.throttle ?? 0
   const brake     = data?.brake    ?? 0
   const clutch    = data?.clutch   ?? 0
-  // iRacing SteeringWheelAngle: positive=left — negate for display
-  const steering  = -(data?.steering ?? 0)
+  // iracing.js already negates SteeringWheelAngle (positive=left in SDK -> positive=right in data.steering)
+  const steering  = data?.steering ?? 0
   const gear      = data?.gear ?? 0
   const speed     = data?.speed ?? 0
   const gearLabel = gear === 0 ? 'N' : gear === -1 ? 'R' : String(gear)

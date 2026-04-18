@@ -167,7 +167,7 @@ function ra(buf, map, dataOffset, name, len) {
 }
 
 function parseSessionYaml(yaml) {
-  const result = { drivers: [], sessions: [], trackName: '', trackId: '' }
+  const result = { drivers: [], sessions: [], trackName: '', trackId: '', qualifyPositions: {}, pitSpeedLimit: 0 }
   result.trackName = (yaml.match(/TrackDisplayName:\s*(.+)/) || [])[1] || ''
   result.trackName = result.trackName.trim().replace(/^'|'$/g, '')
   result.trackId      = (yaml.match(/TrackID:\s*(\d+)/) || [])[1] || ''
@@ -176,6 +176,23 @@ function parseSessionYaml(yaml) {
   result.playerUserName = result.playerUserName.trim().replace(/^'|'$/g, '')
   const sessMatches = [...yaml.matchAll(/SessionNum:\s*(\d+)[\s\S]*?SessionType:\s*(\S+)/g)]
   sessMatches.forEach(m => { result.sessions[parseInt(m[1])] = m[2].trim() })
+
+  // Pit speed limit from TrackInfo section (value is in kph)
+  const pitSpeedMatch = yaml.match(/TrackPitSpeedLimit:\s*([\d.]+)\s*kph/)
+  result.pitSpeedLimit = pitSpeedMatch ? parseFloat(pitSpeedMatch[1]) : 0
+
+  // Qualify starting positions: { carIdx -> 1-indexed start position }
+  const qualifyPositions = {}
+  const qSection = (yaml.match(/QualifyResultsInfo:[\s\S]*?Results:\s*([\s\S]*?)(?=\n[A-Z]|\s*$)/) || [])[1]
+  if (qSection) {
+    qSection.split(/\n\s*- /).slice(1).forEach(function(block) {
+      const posVal    = parseInt((block.match(/Position:\s*(\d+)/) || [])[1])
+      const carIdxVal = parseInt((block.match(/CarIdx:\s*(\d+)/)   || [])[1])
+      if (!isNaN(posVal) && !isNaN(carIdxVal)) qualifyPositions[carIdxVal] = posVal + 1
+    })
+  }
+  result.qualifyPositions = qualifyPositions
+
   // Split on each driver entry — handles both first entry and subsequent entries
   const driversSection = (yaml.match(/Drivers:\s*\n([\s\S]*?)(?:\n\w|$)/) || [])[1] || ''
   // Each driver block starts with " - CarIdx:" or "   CarIdx:" for first entry
@@ -188,14 +205,16 @@ function parseSessionYaml(yaml) {
     const idx = parseInt(g('CarIdx'))
     if (!isNaN(idx) && idx >= 0 && idx < 64) {
       result.drivers[idx] = {
-        carIdx:      idx,
-        userName:    g('UserName'),
-        carNumber:   g('CarNumber'),
-        iRating:     parseInt(g('IRating')) || 1500,
-        licString:   g('LicString'),
-        carClassId:  parseInt(g('CarClassID')) || 0,
-        carClass:    g('CarClassShortName') || '',
-        isSpectator: g('IsSpectator') === '1',
+        carIdx:        idx,
+        userName:      g('UserName'),
+        carNumber:     g('CarNumber'),
+        iRating:       parseInt(g('IRating')) || 1500,
+        licString:     g('LicString'),
+        carClassId:    parseInt(g('CarClassID')) || 0,
+        carClass:      g('CarClassShortName') || '',
+        isSpectator:   g('IsSpectator') === '1',
+        incidentCount: parseInt(g('CurDriverIncidentCount')) || 0,
+        teamName:      g('TeamName'),
       }
     }
   })
@@ -221,6 +240,14 @@ function buildTelemetry(buf, session) {
   const bestLap      = arr('CarIdxBestLapTime', MAX)
   const playerF2     = f2Time[playerCarIdx] || 0
   const playerEst    = estTime[playerCarIdx] || 90
+
+  const carLap         = arr('CarIdxLap',            MAX)
+  const carLapComplete = arr('CarIdxLapCompleted',    MAX)
+  const classPos       = arr('CarIdxClassPosition',   MAX)
+  const carTrackSurf   = arr('CarIdxTrackSurface',    MAX)
+  const carTyreComp    = arr('CarIdxTireCompound',    MAX)
+  const carPitStops    = arr('CarIdxPitStopCount',    MAX)
+  const carFastRepairs = arr('CarIdxFastRepairsUsed', MAX)
 
   const driverList = []
   const drivers = (session && session.drivers) ? session.drivers : []
@@ -250,22 +277,38 @@ function buildTelemetry(buf, session) {
     // Always include the player even if position is 0 (solo/test sessions)
     if (!isPlayer && (!pos || pos <= 0)) continue
     driverList.push({
-      carIdx:        i,
-      position:      pos || 1,
-      driverName:    info.userName,
-      carNumber:     info.carNumber || String(i),
-      iRating:       info.iRating,
-      licenseString: ((info.licString || 'D').match(/[A-Z]+/) || ['D'])[0],
-      carClassId:    info.carClassId || 0,
-      carClass:      info.carClass || '',
-      gapSeconds:    (f2Time[i] || 0) - playerF2,
-      onPitRoad:     onPit[i] || false,
-      isPlayer:      isPlayer,
-      colour:        isPlayer ? '#E8001D' : CAR_COLOURS[i % CAR_COLOURS.length],
-      bestLapTime:   bestLap[i] || 0,
-      lastLapTime:   lastLap[i] || 0,
-      lapDistPct:    lapDistPct[i] || 0,
-      isFastestLap:  false,
+      carIdx:           i,
+      position:         pos || 1,
+      driverName:       info.userName,
+      carNumber:        info.carNumber || String(i),
+      iRating:          info.iRating,
+      licenseString:    ((info.licString || 'D').match(/[A-Z]+/) || ['D'])[0],
+      carClassId:       info.carClassId || 0,
+      carClass:         info.carClass || '',
+      gapSeconds:       (f2Time[i] || 0) - playerF2,
+      onPitRoad:        onPit[i] || false,
+      isPlayer:         isPlayer,
+      colour:           isPlayer ? '#E8001D' : CAR_COLOURS[i % CAR_COLOURS.length],
+      bestLapTime:      bestLap[i] || 0,
+      lastLapTime:      lastLap[i] || 0,
+      lapDistPct:       lapDistPct[i] || 0,
+      isFastestLap:     false,
+      // new fields added in v0.6
+      currentLap:       carLap[i]          != null ? carLap[i]          : 0,
+      lapsCompleted:    carLapComplete[i]   != null ? carLapComplete[i]  : 0,
+      classPosition:    classPos[i]         != null ? classPos[i]        : 0,
+      trackSurface:     carTrackSurf[i]     != null ? carTrackSurf[i]    : -1,
+      tyreCompoundRaw:  carTyreComp[i]      || 0,
+      pitStopCount:     carPitStops[i]      || 0,
+      fastRepairsUsed:  carFastRepairs[i]   || 0,
+      estimatedLapTime: estTime[i]          || 0,
+      incidentCount:    info.incidentCount   || 0,
+      teamName:         info.teamName        || '',
+      qualifyPosition:  (session && session.qualifyPositions && session.qualifyPositions[i]) || null,
+      // computed after standings sort (set below)
+      gapToLeader:      0,
+      intervalToNext:   null,
+      positionsGained:  null,
     })
   }
 
@@ -276,6 +319,20 @@ function buildTelemetry(buf, session) {
 
   const standings = driverList.slice().sort(function(a, b) { return a.position - b.position })
   const byGap     = driverList.slice().sort(function(a, b) { return a.gapSeconds - b.gapSeconds })
+
+  // Compute gapToLeader and intervalToNext (mutates shared driver objects; visible in relative too)
+  const leaderF2 = standings.length > 0 ? (f2Time[standings[0].carIdx] || 0) : 0
+  standings.forEach(function(driver, i) {
+    driver.gapToLeader    = (f2Time[driver.carIdx] || 0) - leaderF2
+    driver.intervalToNext = i === 0 ? null : driver.gapToLeader - standings[i - 1].gapToLeader
+  })
+  // positionsGained: qualify start position minus current race position (positive = moved forward)
+  const qPos = (session && session.qualifyPositions) || {}
+  standings.forEach(function(driver) {
+    const startPos = qPos[driver.carIdx]
+    driver.positionsGained = startPos != null ? startPos - driver.position : null
+  })
+
   // In solo sessions, driverList may only contain the player — ensure relative always includes them
   let relative
   const pIdx = byGap.findIndex(function(x) { return x.isPlayer })
@@ -355,7 +412,7 @@ function buildTelemetry(buf, session) {
     clutch:   Math.min(1, Math.max(0,      r('Clutch') !== undefined ? r('Clutch') : 0)),
     steering: Math.max(-1, Math.min(1, -steerRad / (Math.PI * 0.75))),  // negated: iRacing positive=left
     delta:    r('LapDeltaToBestSessionLap') || 0,
-    tyreCompound: 'M',
+    tyreCompound: r('PlayerTireCompound') != null ? r('PlayerTireCompound') : 0,
     fuel: {
       level:         fuelLevel,
       perLap:        fuelPerLap,
@@ -376,6 +433,7 @@ function buildTelemetry(buf, session) {
     playerLapDistPct: playerLapDistPct,
     trackName:  (session && session.trackName) || '',
     trackId:    (session && session.trackId) || '',
+    pitSpeedLimit: (session && session.pitSpeedLimit) || 0,
     trackTemp:  r('TrackTemp') || 0,
     airTemp:    r('AirTemp')   || 0,
     windSpeed:  r('WindVel')   || 0,
@@ -414,10 +472,15 @@ function buildDemoTelemetry(tick) {
   const rT = Math.max(0, Math.sin(lp)*0.9 + 0.1 + Math.sin(lp*3)*0.15)
   const rB = Math.max(0, -Math.sin(lp+0.6)*0.8 + Math.sin(lp*2.5+1)*0.3)
   const relative = DEMO_DRIVERS.map(function(d, i) {
+    const gapToLeader = d.pos === 1 ? 0 : d.gap + 18.2
     return {carIdx:i, position:d.pos, driverName:d.name, iRating:d.iRating, licenseString:d.lic,
       gapSeconds:d.gap+Math.sin(t*0.3+i)*0.08, onPitRoad:i===1&&tick%800<80,
       isPlayer:d.name==='YOU', colour:d.colour, bestLapTime:85.2+i*0.15,
-      lastLapTime:85.4+Math.sin(t+i)*0.4, lapDistPct:((i*0.12)+t*0.0008)%1, isFastestLap:i===2}
+      lastLapTime:85.4+Math.sin(t+i)*0.4, lapDistPct:((i*0.12)+t*0.0008)%1, isFastestLap:i===2,
+      currentLap:12, lapsCompleted:11, classPosition:d.pos, trackSurface:5,
+      tyreCompoundRaw:1, pitStopCount:i===1&&tick%800<80?1:0, fastRepairsUsed:0,
+      estimatedLapTime:85.2+i*0.15, incidentCount:0, teamName:'', qualifyPosition:d.pos,
+      gapToLeader:gapToLeader, intervalToNext:i===0?null:1.2+Math.sin(t+i)*0.3, positionsGained:0}
   })
   return {
     playerCarIdx:4, speed:220+Math.sin(t*2)*40,
@@ -427,7 +490,7 @@ function buildDemoTelemetry(tick) {
     delta:Math.sin(t*0.4)*0.35+Math.sin(t*0.13)*0.15, tyreCompound:'M',
     fuel:{level:fl,perLap:fp,lapsRemaining:fl/fp,lapsToFinish:18,needed:Math.max(0,(18*fp)-fl)},
     currentLap:12, totalLaps:30, sessionType:'Race', lapsRemain:18,
-    trackTemp:34.2, airTemp:22.5, windSpeed:8.4, windDir:215, skies:'Partly Cloudy',
+    pitSpeedLimit:60, trackTemp:34.2, airTemp:22.5, windSpeed:8.4, windDir:215, skies:'Partly Cloudy',
     sessionFlags:0x04, sessionTimeRemain:Math.max(0,1800-tick*0.5),
     latAccel:Math.sin(lp*2)*2.8, lonAccel:Math.cos(lp)*1.5,
     ersRemaining:0.7, ersDeployPct:0.35,

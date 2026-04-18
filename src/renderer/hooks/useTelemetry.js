@@ -28,14 +28,21 @@ export function buildDemoData(tick) {
   const steering = Math.sin(lapPhase * 1.5) * 0.6
   const delta    = Math.sin(t * 0.4) * 0.35 + Math.sin(t * 0.13) * 0.15
 
-  const relative = DEMO_DRIVERS.map((d, i) => ({
-    carIdx: i, position: d.pos, driverName: d.name, iRating: d.iRating,
-    licenseString: d.lic, gapSeconds: d.gap + Math.sin(t * 0.3 + i) * 0.08,
-    onPitRoad: i === 1 && tick % 800 < 80, isPlayer: d.name === 'YOU',
-    colour: DRIVER_COLOURS[i], bestLapTime: 85.2 + i * 0.15,
-    lastLapTime: 85.4 + Math.sin(t + i) * 0.4,
-    lapDistPct: ((i * 0.12) + t * 0.0008) % 1, isFastestLap: i === 2
-  }))
+  const relative = DEMO_DRIVERS.map((d, i) => {
+    const gapToLeader = d.pos === 1 ? 0 : d.gap + 18.2
+    return {
+      carIdx: i, position: d.pos, driverName: d.name, iRating: d.iRating,
+      licenseString: d.lic, gapSeconds: d.gap + Math.sin(t * 0.3 + i) * 0.08,
+      onPitRoad: i === 1 && tick % 800 < 80, isPlayer: d.name === 'YOU',
+      colour: DRIVER_COLOURS[i], bestLapTime: 85.2 + i * 0.15,
+      lastLapTime: 85.4 + Math.sin(t + i) * 0.4,
+      lapDistPct: ((i * 0.12) + t * 0.0008) % 1, isFastestLap: i === 2,
+      currentLap: 12, lapsCompleted: 11, classPosition: d.pos, trackSurface: 5,
+      tyreCompoundRaw: 1, pitStopCount: i === 1 && tick % 800 < 80 ? 1 : 0, fastRepairsUsed: 0,
+      estimatedLapTime: 85.2 + i * 0.15, incidentCount: 0, teamName: '', qualifyPosition: d.pos,
+      gapToLeader, intervalToNext: i === 0 ? null : 1.2 + Math.sin(t + i) * 0.3, positionsGained: 0,
+    }
+  })
 
   return {
     connected: true, demo: true,
@@ -47,6 +54,7 @@ export function buildDemoData(tick) {
       throttle, brake, clutch, steering, delta, tyreCompound: 'M',
       fuel: { level: fuelLevel, perLap: fuelPerLap, lapsRemaining: fuelLevel / fuelPerLap, lapsToFinish: 18, needed: Math.max(0, (18 * fuelPerLap) - fuelLevel) },
       currentLap: 12, totalLaps: 30, sessionType: 'Race', lapsRemain: 18,
+      pitSpeedLimit: 60,
       trackTemp: 34.2, airTemp: 22.5, windSpeed: 8.4, windDir: 215, skies: 'Partly Cloudy',
       sessionFlags: 0x04, sessionTimeRemain: Math.max(0, 1800 - tick * 0.5),
       latAccel: Math.sin(lapPhase * 2) * 2.8, lonAccel: Math.cos(lapPhase) * 1.5,

@@ -207,6 +207,23 @@ ipcMain.handle('get-overlay-scale', (event, id) => {
   return saved?.scale ?? 1
 })
 
+// ─── IPC: Overlay content settings ─────────────────────────────────────────
+ipcMain.handle('get-overlay-settings', (event, id) => {
+  return store ? store.get('overlay.' + id + '.content') || null : null
+})
+
+ipcMain.handle('save-overlay-settings', (event, id, content) => {
+  if (!store) return
+  store.set('overlay.' + id + '.content', content)
+  const win = overlayWindows[id]
+  if (win && !win.isDestroyed()) win.webContents.send('overlay-settings-changed', id, content)
+})
+
+// ─── IPC: Active overlay list ───────────────────────────────────────────────
+ipcMain.handle('get-active-overlays', () => {
+  return store ? store.get('app.activeOverlays') || [] : []
+})
+
 // ─── IPC: Track map cache ──────────────────────────────────────────────────
 ipcMain.handle('trackmap-save', (event, { trackId, points }) => {
   if (store) store.set('trackmap.' + trackId, points)
@@ -224,11 +241,19 @@ ipcMain.handle('show-overlay', (event, id) => {
   } else {
     createOverlayWindow(id, getSavedConfig(id))
   }
+  if (store) {
+    const active = store.get('app.activeOverlays') || []
+    if (!active.includes(id)) store.set('app.activeOverlays', [...active, id])
+  }
 })
 
 ipcMain.handle('hide-overlay', (event, id) => {
   if (overlayWindows[id] && !overlayWindows[id].isDestroyed())
     overlayWindows[id].hide()
+  if (store) {
+    const active = store.get('app.activeOverlays') || []
+    store.set('app.activeOverlays', active.filter(x => x !== id))
+  }
 })
 
 // ─── IPC: Passthrough ───────────────────────────────────────────────────────
@@ -284,6 +309,15 @@ app.whenReady().then(async () => {
   await loadStore()
   if (Store) store = new Store({ name: 'ari-layout' })
   createControlWindow()
+
+  // Restore overlays that were active in the previous session
+  if (store) {
+    const activeIds = store.get('app.activeOverlays') || []
+    activeIds.forEach(id => {
+      if (OVERLAY_DEFAULTS[id]) createOverlayWindow(id, getSavedConfig(id))
+    })
+  }
+
   iracingSDK = new IRacingSDK(broadcastTelemetry)
   iracingSDK.start()
 

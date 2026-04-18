@@ -38,4 +38,13 @@ contextBridge.exposeInMainWorld('ari', {
   // Telemetry
   onTelemetry:             (cb) => ipcRenderer.on('telemetry-update', (e, data) => cb(data)),
   removeTelemetryListener: ()   => ipcRenderer.removeAllListeners('telemetry-update'),
+
+  // Active overlays — persisted list for startup restore
+  getActiveOverlays: () => ipcRenderer.invoke('get-active-overlays'),
+
+  // Per-overlay content settings (column selection, variants, etc.)
+  getOverlaySettings:          (id)       => ipcRenderer.invoke('get-overlay-settings', id),
+  saveOverlaySettings:         (id, c)    => ipcRenderer.invoke('save-overlay-settings', id, c),
+  onOverlaySettingsChanged:    (cb)       => ipcRenderer.on('overlay-settings-changed', (e, id, c) => cb(id, c)),
+  removeSettingsChangeListener: ()        => ipcRenderer.removeAllListeners('overlay-settings-changed'),
 })

@@ -80,12 +80,37 @@ The `pages/`, `telemetry/`, and `iracing_ui.py` files are a superseded Python-ba
 - **Brake**: iRacing sends 1=released, 0=fully pressed. `iracing.js` inverts at source: `data.brake = 1 - Brake`. Overlays use `data.brake` directly — do NOT invert again.
 - **Clutch**: iRacing sends 0=released, 1=fully pressed — `iracing.js` passes through raw. Overlays use `data.clutch` directly, no inversion.
 - **Throttle**: 0=idle, 1=full — use directly, no inversion
-- **SteeringWheelAngle**: positive=left in iRacing — negate for display
+- **SteeringWheelAngle**: positive=left in iRacing. `iracing.js` negates at source so `data.steering` positive = right. Overlays use `data.steering` directly — do NOT negate again.
 - **Lat/Lon GPS**: available in `.ibt` files but blocked in the live SDK — do not attempt to read live GPS coordinates
 - **Track maps** come from `track-database.js` (bundled GPS data) or `.ibt` file scanning only
+- **tyreCompound** (`data.tyreCompound`): raw integer from `PlayerTireCompound` SDK variable. 0 = unknown/generic. Per-car compound is `driver.tyreCompoundRaw`. Do not hardcode to `'M'`.
+- **pitSpeedLimit** (`data.pitSpeedLimit`): kph, parsed from YAML `TrackPitSpeedLimit`. Falls back to 0 if YAML not yet parsed. `PitboxHelperOverlay` uses this directly.
+
+## Per-Driver Fields (v0.6+)
+
+Each entry in `data.relative[]` and `data.standings[]` now includes these additional fields beyond the originals:
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| `currentLap` | `CarIdxLap` | Current lap number for this car |
+| `lapsCompleted` | `CarIdxLapCompleted` | Completed laps |
+| `classPosition` | `CarIdxClassPosition` | Position within own class |
+| `trackSurface` | `CarIdxTrackSurface` | 5=on track, 2=pit lane, 3=pit stall, -1=unknown |
+| `tyreCompoundRaw` | `CarIdxTireCompound` | Raw int; car-class-specific mapping TBD |
+| `pitStopCount` | `CarIdxPitStopCount` | Pit stops taken this session |
+| `fastRepairsUsed` | `CarIdxFastRepairsUsed` | Fast repairs used |
+| `estimatedLapTime` | `CarIdxEstTime` | iRacing's estimated lap time for this car |
+| `incidentCount` | YAML `CurDriverIncidentCount` | Current incident count |
+| `teamName` | YAML `TeamName` | Team name string |
+| `qualifyPosition` | YAML `QualifyResultsInfo` | Starting grid position; null if no qual data |
+| `gapToLeader` | computed | Seconds behind race leader (0 for leader) |
+| `intervalToNext` | computed | Seconds to car directly ahead; null for leader |
+| `positionsGained` | computed | `qualifyPos - currentPos`; positive = moved forward; null if no qual data |
 
 ## Known Issues to Never Reintroduce
 
 - **Brake showing 100% at rest / 0% when pressed** = inversion applied twice or not at all — check that exactly one `1 - value` inversion exists in the data path
+- **Steering backwards / L-R label wrong** = negation applied in an overlay on top of iracing.js negation — overlays must use `data.steering` directly, no extra negation
 - **InputsOverlay** must be a wide horizontal rectangle (default width 360px), not square
 - **`SAMPLES` variable** was removed from `TrackMapOverlay` — do not re-add it
+- **`tyreCompound` hardcoded to `'M'`** — was a bug; it is now the raw SDK integer

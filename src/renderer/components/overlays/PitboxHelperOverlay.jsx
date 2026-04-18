@@ -3,13 +3,14 @@ import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
 
-const PIT_SPEED_LIMIT = 60  // km/h — standard limit; iRacing varies by track
+const DEFAULT_PIT_LIMIT = 60  // km/h fallback if YAML not yet parsed
 
 export default function PitboxHelperOverlay() {
   const { data } = useTelemetry()
 
-  const speed      = data?.speed    ?? 0
-  const onPitRoad  = data?.onPitRoad ?? false
+  const speed         = data?.speed          ?? 0
+  const onPitRoad     = data?.onPitRoad      ?? false
+  const PIT_SPEED_LIMIT = data?.pitSpeedLimit > 0 ? data.pitSpeedLimit : DEFAULT_PIT_LIMIT
 
   const overLimit = onPitRoad && speed > PIT_SPEED_LIMIT
   const delta     = speed - PIT_SPEED_LIMIT
