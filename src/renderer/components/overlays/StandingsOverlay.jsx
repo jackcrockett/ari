@@ -4,6 +4,7 @@ import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
 import DriverRow from '../ui/DriverRow'
 import { DEFAULT_COLUMNS } from '../../lib/columnDefs'
+import { DEFAULT_VARIANT } from '../../lib/overlayVariants'
 
 export default function StandingsOverlay() {
   const { data } = useTelemetry()
@@ -11,6 +12,7 @@ export default function StandingsOverlay() {
 
   const [columns,  setColumns]  = useState(DEFAULT_COLUMNS.standings)
   const [rowCount, setRowCount] = useState(10)
+  const [variant,  setVariant]  = useState(DEFAULT_VARIANT)
 
   // Load persisted column settings on mount
   useEffect(() => {
@@ -18,6 +20,7 @@ export default function StandingsOverlay() {
     window.ari.getOverlaySettings('standings').then(s => {
       if (s?.columns?.length) setColumns(s.columns)
       if (s?.rowCount)        setRowCount(s.rowCount)
+      if (s?.variant)         setVariant(s.variant)
     })
   }, [hasElectron])
 
@@ -28,6 +31,7 @@ export default function StandingsOverlay() {
       if (id !== 'standings') return
       if (s?.columns?.length) setColumns(s.columns)
       if (s?.rowCount)        setRowCount(s.rowCount)
+      if (s?.variant)         setVariant(s.variant)
     })
     return () => window.ari.removeSettingsChangeListener()
   }, [hasElectron])
@@ -66,6 +70,7 @@ export default function StandingsOverlay() {
             columns={columns}
             isLast={i === standings.length - 1}
             data={data}
+            variant={variant}
           />
         ))}
       </div>

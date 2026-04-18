@@ -4,6 +4,7 @@ import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
 import DriverRow from '../ui/DriverRow'
 import { DEFAULT_COLUMNS } from '../../lib/columnDefs'
+import { DEFAULT_VARIANT } from '../../lib/overlayVariants'
 
 export default function LeaderboardOverlay() {
   const { data } = useTelemetry()
@@ -11,12 +12,14 @@ export default function LeaderboardOverlay() {
 
   const [columns,  setColumns]  = useState(DEFAULT_COLUMNS.leaderboard)
   const [rowCount, setRowCount] = useState(15)
+  const [variant,  setVariant]  = useState(DEFAULT_VARIANT)
 
   useEffect(() => {
     if (!hasElectron) return
     window.ari.getOverlaySettings('leaderboard').then(s => {
       if (s?.columns?.length) setColumns(s.columns)
       if (s?.rowCount)        setRowCount(s.rowCount)
+      if (s?.variant)         setVariant(s.variant)
     })
   }, [hasElectron])
 
@@ -26,6 +29,7 @@ export default function LeaderboardOverlay() {
       if (id !== 'leaderboard') return
       if (s?.columns?.length) setColumns(s.columns)
       if (s?.rowCount)        setRowCount(s.rowCount)
+      if (s?.variant)         setVariant(s.variant)
     })
     return () => window.ari.removeSettingsChangeListener()
   }, [hasElectron])
@@ -63,6 +67,7 @@ export default function LeaderboardOverlay() {
                 columns={columns}
                 isLast={i === standings.length - 1}
                 data={data}
+                variant={variant}
               />
             </div>
           ))}

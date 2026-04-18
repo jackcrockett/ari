@@ -1,7 +1,7 @@
 # ARI Competitive Uplift Plan
 
 > Phase 2 of the uplift project. Produced after the Phase 1 audit.
-> Status: v0.6-v0.10 shipped 2026-04-18. v1.0 next.
+> Status: v0.6-v1.0 shipped 2026-04-18. All planned phases complete.
 
 ---
 
@@ -777,17 +777,21 @@ Each phase is independently shippable. All existing overlays must work after eve
 
 ### v1.0 -- Style Variants + Polish (Tier 2-C)
 **Goal**: Multiple visual styles for key overlays; fullscreen documentation; general polish.
+**Status**: SHIPPED 2026-04-18
 
-| Item | Work |
-|------|------|
-| `overlayVariants.js` -- compact, default, broadcast style tokens | New file |
-| Variant selector in column picker panel | Modified |
-| Apply variants to Standings, Relative, Leaderboard | Modified |
-| Fullscreen setup wizard / detection in ControlPanel | Modified |
-| Fullscreen documentation in README | Docs |
-| Flat map sector markers and class colors | `FlatMapOverlay.jsx` |
+| Item | Status | Notes |
+|------|--------|-------|
+| `overlayVariants.js` -- compact, default, broadcast style tokens | Done | 3 variants: Default (unchanged), Compact (tighter rows, +30% density), Broadcast (taller rows, all-driver colour accents, no separators) |
+| Variant selector in column picker panel | Done | 3-button selector in ColumnPicker; persisted as `variant` in overlay settings alongside columns |
+| Apply variants to Standings, Relative, Leaderboard | Done | All three overlays load and pass variant to DriverRow |
+| DriverRow variant support | Done | Reads VARIANTS tokens for padding, gap, border, leftAccentMode |
+| Fullscreen mode hint in ControlPanel | Done | Subtle info row above footer: "Overlays require iRacing borderless windowed mode" |
+| Fullscreen setup wizard | Deferred | Static hint is sufficient; full wizard adds complexity without proportional value |
+| Fullscreen documentation in README | Deferred | No README exists; defer to separate docs task |
+| Flat map sector markers | Done | Approximate sector boundaries at 33% and 67% of oval with tick marks and S2/S3 labels |
+| Flat map class colors | Already done | Driver colours were already used via driver.colour in v0.9 |
 
-**Complexity**: S-M for variants; S for documentation.
+**Deviations**: No full setup wizard (single-line hint preferred). No README docs (none existed to update). FlatMap sector markers are approximate (evenly spaced) since iRacing live SDK does not expose real sector positions.
 
 ---
 

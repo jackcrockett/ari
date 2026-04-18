@@ -4,18 +4,21 @@ import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
 import DriverRow from '../ui/DriverRow'
 import { DEFAULT_COLUMNS } from '../../lib/columnDefs'
+import { DEFAULT_VARIANT } from '../../lib/overlayVariants'
 
 export default function RelativeOverlay() {
   const { data, connected } = useTelemetry()
   const hasElectron = typeof window !== 'undefined' && window.ari
 
   const [columns, setColumns] = useState(DEFAULT_COLUMNS.relative)
+  const [variant, setVariant] = useState(DEFAULT_VARIANT)
 
   // Load persisted column settings on mount
   useEffect(() => {
     if (!hasElectron) return
     window.ari.getOverlaySettings('relative').then(s => {
       if (s?.columns?.length) setColumns(s.columns)
+      if (s?.variant)         setVariant(s.variant)
     })
   }, [hasElectron])
 
@@ -25,6 +28,7 @@ export default function RelativeOverlay() {
     window.ari.onOverlaySettingsChanged((id, s) => {
       if (id !== 'relative') return
       if (s?.columns?.length) setColumns(s.columns)
+      if (s?.variant)         setVariant(s.variant)
     })
     return () => window.ari.removeSettingsChangeListener()
   }, [hasElectron])
@@ -69,6 +73,7 @@ export default function RelativeOverlay() {
             columns={columns}
             isLast={i === drivers.length - 1}
             data={data}
+            variant={variant}
           />
         ))}
       </div>

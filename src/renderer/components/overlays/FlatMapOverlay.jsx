@@ -53,6 +53,24 @@ export default function FlatMapOverlay() {
       ctx.moveTo(sfX, PAD + 4); ctx.lineTo(sfX, PAD - 4)
       ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 2; ctx.stroke()
 
+      // Approximate sector boundaries at 1/3 and 2/3 of the lap
+      ;[0.333, 0.667].forEach((pct, i) => {
+        const [sx, sy] = posOnOval(pct, W, H, PAD)
+        const angle = (pct * Math.PI * 2) - Math.PI / 2
+        const nx = Math.cos(angle), ny = Math.sin(angle)
+        // Tick mark straddling the track line
+        ctx.beginPath()
+        ctx.moveTo(sx - nx * 5, sy - ny * 5)
+        ctx.lineTo(sx + nx * 5, sy + ny * 5)
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1.5; ctx.stroke()
+        // Sector label
+        ctx.fillStyle = 'rgba(255,255,255,0.22)'
+        ctx.font = '7px monospace'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(`S${i + 2}`, sx + nx * 14, sy + ny * 14)
+      })
+
       // Other drivers
       drivers.filter(d => !d.isPlayer).forEach(d => {
         const [x,y] = posOnOval(d.lapDistPct, W, H, PAD)

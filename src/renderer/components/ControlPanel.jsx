@@ -604,9 +604,28 @@ export default function ControlPanel() {
         </>
       )}
 
+      {/* Fullscreen mode hint */}
+      <div style={{
+        padding: '5px 18px',
+        borderTop: '1px solid rgba(255,255,255,0.04)',
+        flexShrink: 0,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
+      }}>
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ flexShrink: 0 }}>
+          <circle cx="5" cy="5" r="4.5" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+          <rect x="4.5" y="3" width="1" height="1" rx="0.3" fill="rgba(255,255,255,0.18)" />
+          <rect x="4.5" y="5" width="1" height="2.5" rx="0.3" fill="rgba(255,255,255,0.18)" />
+        </svg>
+        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.15)' }}>
+          Overlays require iRacing borderless windowed mode
+        </span>
+      </div>
+
       {/* Footer */}
       <div style={{
-        padding: '12px 18px',
+        padding: '10px 18px',
         borderTop: '1px solid rgba(255,255,255,0.06)',
         display: 'flex',
         justifyContent: 'space-between',

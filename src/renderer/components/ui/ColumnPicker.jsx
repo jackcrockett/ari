@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { COLUMN_DEFS, COLUMN_GROUPS, DEFAULT_COLUMNS } from '../../lib/columnDefs'
+import { VARIANTS, DEFAULT_VARIANT } from '../../lib/overlayVariants'
 
 const LABEL_OVERRIDES = {
   colorDot:     'Color Dot',
@@ -42,8 +43,9 @@ export default function ColumnPicker({ overlayId, overlayLabel, onBack }) {
   const hasElectron = typeof window !== 'undefined' && window.ari
   const defaultCols = DEFAULT_COLUMNS[overlayId] || []
 
-  const [columns, setColumns] = useState(defaultCols)
+  const [columns,  setColumns]  = useState(defaultCols)
   const [rowCount, setRowCount] = useState(overlayId === 'standings' ? 10 : 5)
+  const [variant,  setVariant]  = useState(DEFAULT_VARIANT)
 
   // Load persisted settings on mount
   useEffect(() => {
@@ -51,17 +53,19 @@ export default function ColumnPicker({ overlayId, overlayLabel, onBack }) {
     window.ari.getOverlaySettings(overlayId).then(s => {
       if (s?.columns?.length) setColumns(s.columns)
       if (s?.rowCount)        setRowCount(s.rowCount)
+      if (s?.variant)         setVariant(s.variant)
     })
   }, [overlayId, hasElectron])
 
-  // Auto-save whenever columns or rowCount changes
-  const save = useCallback((cols, rc) => {
+  // Auto-save on any change (callers pass current values to avoid stale closure)
+  const save = useCallback((cols, rc, vt) => {
     if (!hasElectron) return
-    window.ari.saveOverlaySettings(overlayId, { columns: cols, rowCount: rc })
+    window.ari.saveOverlaySettings(overlayId, { columns: cols, rowCount: rc, variant: vt })
   }, [overlayId, hasElectron])
 
-  const updateColumns = (next) => { setColumns(next); save(next, rowCount) }
-  const updateRowCount = (n)    => { setRowCount(n);   save(columns, n)    }
+  const updateColumns  = (next) => { setColumns(next); save(next, rowCount, variant) }
+  const updateRowCount = (n)    => { setRowCount(n);   save(columns, n, variant)     }
+  const updateVariant  = (v)    => { setVariant(v);    save(columns, rowCount, v)    }
 
   const moveUp = (i) => {
     if (i === 0) return
@@ -83,7 +87,11 @@ export default function ColumnPicker({ overlayId, overlayLabel, onBack }) {
     if (!columns.includes(id)) updateColumns([...columns, id])
   }
 
-  const reset = () => updateColumns(defaultCols)
+  const reset = () => {
+    setColumns(defaultCols)
+    setVariant(DEFAULT_VARIANT)
+    save(defaultCols, rowCount, DEFAULT_VARIANT)
+  }
 
   // All columns not currently active
   const available = COLUMN_GROUPS
@@ -154,6 +162,31 @@ export default function ColumnPicker({ overlayId, overlayLabel, onBack }) {
             </div>
           </div>
         )}
+
+        {/* Style variant */}
+        <div style={{ padding: '10px 0 8px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 8 }}>
+          <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>
+            Style
+          </div>
+          <div style={{ display: 'flex', gap: 5 }}>
+            {Object.values(VARIANTS).map(v => (
+              <button
+                key={v.id}
+                onClick={() => updateVariant(v.id)}
+                style={{
+                  flex: 1, padding: '3px 0', borderRadius: 4, cursor: 'pointer',
+                  fontFamily: 'var(--font-data)', fontSize: 9,
+                  background: variant === v.id ? '#E8001D' : 'rgba(255,255,255,0.05)',
+                  color: variant === v.id ? '#fff' : 'rgba(255,255,255,0.5)',
+                  border: variant === v.id ? '1px solid rgba(232,0,29,0.4)' : '1px solid rgba(255,255,255,0.1)',
+                  textTransform: 'uppercase', letterSpacing: '0.08em',
+                }}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Active columns */}
         <div style={{ padding: '10px 0 4px' }}>
