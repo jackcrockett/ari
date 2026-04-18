@@ -28,11 +28,11 @@ let store = null
 // Natural (default) dimensions for each overlay.
 // Scale is stored separately in electron-store and applied at window creation.
 const OVERLAY_DEFAULTS = {
-  relative:      { x: 20,   y: 100,  width: 300, height: 225 },
-  standings:     { x: 20,   y: 340,  width: 300, height: 295 },
-  fuel:          { x: 20,   y: 650,  width: 300, height: 175 },
+  relative:      { x: 20,   y: 100,  width: 300, height: 250 },
+  standings:     { x: 20,   y: 370,  width: 300, height: 310 },
+  fuel:          { x: 20,   y: 710,  width: 300, height: 220 },
   trackmap:      { x: 340,  y: 100,  width: 220, height: 255 },
-  inputs:        { x: 340,  y: 370,  width: 480, height: 100 },
+  inputs:        { x: 340,  y: 370,  width: 480, height: 110 },
   tyres:         { x: 610,  y: 100,  width: 250, height: 310 },
   radar:         { x: 880,  y: 100,  width: 180, height: 180 },
   headtohead:    { x: 340,  y: 480,  width: 300, height: 210 },

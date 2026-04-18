@@ -1,10 +1,17 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { useTelemetry } from '../../hooks/useTelemetry'
+import { useTelemetry, formatLapTime } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
 import DriverRow from '../ui/DriverRow'
 import { DEFAULT_COLUMNS } from '../../lib/columnDefs'
 import { DEFAULT_VARIANT } from '../../lib/overlayVariants'
+
+function formatTime(secs) {
+  if (!secs || secs <= 0) return '--:--'
+  const m = Math.floor(secs / 60)
+  const s = Math.floor(secs % 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
 
 export default function StandingsOverlay() {
   const { data } = useTelemetry()
@@ -57,11 +64,27 @@ export default function StandingsOverlay() {
     <ResizeHandles overlayId="standings">
       <div className="overlay" style={{ width: 300 }}>
         <DragHandle overlayId="standings" label="Standings" onSettings={openSettings}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
-            Lap <strong style={{ color: '#fff' }}>{data.currentLap}</strong>
-            {data.totalLaps ? ` / ${data.totalLaps}` : ''}
+          <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em' }}>
+            {data.sessionType || 'RACE'}
           </span>
         </DragHandle>
+
+        {/* Session info strip */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '3px 10px',
+          background: 'rgba(255,255,255,0.02)',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+        }}>
+          <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em' }}>
+            LAP <strong style={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-mono)' }}>
+              {data.currentLap ?? '--'}
+            </strong>{data.totalLaps ? ` / ${data.totalLaps}` : ''}
+          </span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>
+            {formatTime(data.sessionTimeRemain)}
+          </span>
+        </div>
 
         {standings.map((driver, i) => (
           <DriverRow

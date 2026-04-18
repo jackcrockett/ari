@@ -4,20 +4,26 @@ import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
 
 const HISTORY      = 300
-const CONTENT_H    = 62
+const CONTENT_H    = 68
 const THROTTLE_COL = '#22C55E'
 const BRAKE_COL    = '#E8001D'
 const CLUTCH_COL   = '#60A5FA'
 
-// Compact vertical pedal bar — stretches to fill parent height
+// Compact vertical pedal bar
 function PedalBar({ value = 0, color, label }) {
   const pct = Math.round(Math.max(0, Math.min(1, value)) * 100)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: 14, height: '100%' }}>
       <div style={{
+        fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700,
+        color: pct > 5 ? color : 'rgba(255,255,255,0.2)', lineHeight: 1, marginBottom: 1,
+      }}>
+        {pct}
+      </div>
+      <div style={{
         width: '100%', flex: 1, minHeight: 0,
-        background: 'rgba(255,255,255,0.06)',
-        borderRadius: 2, position: 'relative', overflow: 'hidden',
+        background: 'rgba(255,255,255,0.06)', borderRadius: 2,
+        position: 'relative', overflow: 'hidden',
       }}>
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -39,32 +45,31 @@ function PedalBar({ value = 0, color, label }) {
   )
 }
 
-// Steering wheel — sized to fit compact content row
+// Steering wheel — matches reference circle design
 function SteeringWheel({ value = 0, maxAngle = 450 }) {
   const deg = value * maxAngle
-  const cx = 26, cy = 26, r = 20
+  const cx = 24, cy = 24, r = 18
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, flexShrink: 0 }}>
       <svg
-        width={52} height={52} viewBox="0 0 52 52"
+        width={48} height={48} viewBox="0 0 48 48"
         style={{ transform: `rotate(${deg}deg)`, transition: 'transform 0.025s linear' }}
       >
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth={4} />
-        <circle cx={cx} cy={cy} r={5} fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.2)" strokeWidth={1.5} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth={4} />
+        <circle cx={cx} cy={cy} r={5} fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" strokeWidth={1.5} />
         {[0, 120, 240].map(a => {
           const rad = (a - 90) * Math.PI / 180
           return <line key={a}
             x1={cx + 6 * Math.cos(rad)} y1={cy + 6 * Math.sin(rad)}
             x2={cx + (r - 1) * Math.cos(rad)} y2={cy + (r - 1) * Math.sin(rad)}
-            stroke="rgba(255,255,255,0.3)" strokeWidth={3} strokeLinecap="round" />
+            stroke="rgba(255,255,255,0.28)" strokeWidth={3} strokeLinecap="round" />
         })}
         <circle cx={cx} cy={cy - r + 3} r={2.5} fill="#E8001D" />
       </svg>
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
-        color: Math.abs(value) > 0.02 ? '#fff' : 'rgba(255,255,255,0.2)',
-        lineHeight: 1,
+        fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700,
+        color: Math.abs(value) > 0.02 ? '#fff' : 'rgba(255,255,255,0.2)', lineHeight: 1,
       }}>
         {value >= 0 ? 'R' : 'L'} {Math.abs(Math.round(deg))}°
       </span>
@@ -77,10 +82,10 @@ function Divider() {
 }
 
 export default function InputsOverlay() {
-  const { data }  = useTelemetry()
-  const canvasRef = useRef(null)
+  const { data }   = useTelemetry()
+  const canvasRef  = useRef(null)
   const historyRef = useRef([])
-  const rafRef    = useRef(null)
+  const rafRef     = useRef(null)
 
   useEffect(() => {
     if (!data) return
@@ -128,6 +133,7 @@ export default function InputsOverlay() {
       })
       ctx.stroke()
 
+      // Filled area
       ctx.beginPath()
       h.forEach((s, i) => {
         const x = toX(i), y = toY(s[key])
@@ -154,60 +160,43 @@ export default function InputsOverlay() {
   const throttle  = data?.throttle ?? 0
   const brake     = data?.brake    ?? 0
   const clutch    = data?.clutch   ?? 0
-  // iracing.js already negates SteeringWheelAngle (positive=left in SDK -> positive=right in data.steering)
   const steering  = data?.steering ?? 0
   const gear      = data?.gear ?? 0
   const speed     = data?.speed ?? 0
+  const rpm       = data?.rpm ?? 0
   const gearLabel = gear === 0 ? 'N' : gear === -1 ? 'R' : String(gear)
 
   return (
     <ResizeHandles overlayId="inputs">
       <div className="overlay" style={{ width: 480 }}>
 
-        <DragHandle overlayId="inputs" label="Inputs" />
+        <DragHandle overlayId="inputs" label="Inputs">
+          <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em' }}>
+            {Math.round(rpm / 100) * 100 > 0 ? `${(rpm / 1000).toFixed(1)}k RPM` : ''}
+          </span>
+        </DragHandle>
 
-        {/* Single compact content row — mirrors iRacing HUD layout */}
+        {/* Single compact content row — left: gear/speed, then bars, then wheel, then trace */}
         <div style={{
           display: 'flex', alignItems: 'stretch',
-          padding: '6px 12px', gap: 10,
+          padding: '6px 10px', gap: 8,
           height: CONTENT_H,
         }}>
 
-          {/* Scrolling input trace */}
-          <div style={{
-            flex: 1, minWidth: 0,
-            background: 'rgba(0,0,0,0.3)',
-            borderRadius: 4, overflow: 'hidden',
-            border: '1px solid rgba(255,255,255,0.05)',
-          }}>
-            <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
-          </div>
-
-          <Divider />
-
-          {/* Current T / B / C bars */}
-          <div style={{ display: 'flex', gap: 5, alignItems: 'stretch' }}>
-            <PedalBar value={throttle} color={THROTTLE_COL} label="T" />
-            <PedalBar value={brake}    color={BRAKE_COL}    label="B" />
-            <PedalBar value={clutch}   color={CLUTCH_COL}   label="C" />
-          </div>
-
-          <Divider />
-
-          {/* Gear + Speed */}
+          {/* Gear + Speed — leftmost, matches reference layout */}
           <div style={{
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            gap: 1, minWidth: 46, flexShrink: 0,
+            gap: 0, minWidth: 42, flexShrink: 0,
           }}>
             <span style={{
-              fontFamily: 'var(--font-mono)', fontSize: 30, fontWeight: 900, lineHeight: 1,
+              fontFamily: 'var(--font-mono)', fontSize: 32, fontWeight: 900, lineHeight: 1,
               color: '#F59E0B',
             }}>
               {gearLabel}
             </span>
             <span style={{
-              fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700,
+              fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700,
               color: 'rgba(255,255,255,0.9)', lineHeight: 1,
             }}>
               {Math.round(speed)}
@@ -216,14 +205,56 @@ export default function InputsOverlay() {
               fontFamily: 'var(--font-data)', fontSize: 7,
               color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em',
             }}>
-              KMH
+              KPH
             </span>
+          </div>
+
+          <Divider />
+
+          {/* T / B / C bars with live % values */}
+          <div style={{ display: 'flex', gap: 4, alignItems: 'stretch' }}>
+            <PedalBar value={throttle} color={THROTTLE_COL} label="T" />
+            <PedalBar value={brake}    color={BRAKE_COL}    label="B" />
+            <PedalBar value={clutch}   color={CLUTCH_COL}   label="C" />
           </div>
 
           <Divider />
 
           {/* Steering wheel */}
           <SteeringWheel value={steering} />
+
+          <Divider />
+
+          {/* Scrolling input trace — takes remaining space on the right */}
+          <div style={{
+            flex: 1, minWidth: 0,
+            background: 'rgba(0,0,0,0.3)',
+            borderRadius: 4, overflow: 'hidden',
+            border: '1px solid rgba(255,255,255,0.05)',
+            position: 'relative',
+          }}>
+            <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+            {/* Live T/B/C percentages overlaid on trace */}
+            <div style={{
+              position: 'absolute', top: 3, right: 5,
+              display: 'flex', gap: 5, alignItems: 'center',
+              pointerEvents: 'none',
+            }}>
+              {[
+                { v: throttle, c: THROTTLE_COL, l: 'T' },
+                { v: brake,    c: BRAKE_COL,    l: 'B' },
+                { v: clutch,   c: CLUTCH_COL,   l: 'C' },
+              ].map(({ v, c, l }) => (
+                <span key={l} style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
+                  color: Math.round(v * 100) > 0 ? c : 'rgba(255,255,255,0.2)',
+                  textShadow: '0 0 4px rgba(0,0,0,0.8)',
+                }}>
+                  {Math.round(v * 100)}
+                </span>
+              ))}
+            </div>
+          </div>
 
         </div>
       </div>

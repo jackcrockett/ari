@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { useTelemetry } from '../../hooks/useTelemetry'
+import { useTelemetry, formatLapTime } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
 import ResizeHandles from '../ui/ResizeHandles'
 import DriverRow from '../ui/DriverRow'
@@ -42,6 +42,8 @@ export default function RelativeOverlay() {
     return sorted.slice(start, start + 5)
   }, [data])
 
+  const player = useMemo(() => drivers.find(d => d.isPlayer), [drivers])
+
   const openSettings = () => {
     if (hasElectron) window.ari.requestOpenSettings('relative')
   }
@@ -76,6 +78,24 @@ export default function RelativeOverlay() {
             variant={variant}
           />
         ))}
+
+        {/* Player lap time footer */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '3px 10px',
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em' }}>
+            LAST <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'rgba(255,255,255,0.6)', fontWeight: 500 }}>
+              {formatLapTime(player?.lastLapTime)}
+            </strong>
+          </span>
+          <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em' }}>
+            BEST <strong style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: '#C084FC', fontWeight: 500 }}>
+              {formatLapTime(player?.bestLapTime)}
+            </strong>
+          </span>
+        </div>
       </div>
     </ResizeHandles>
   )
