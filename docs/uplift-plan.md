@@ -1,7 +1,7 @@
 # ARI Competitive Uplift Plan
 
 > Phase 2 of the uplift project. Produced after the Phase 1 audit.
-> Status: v0.6 shipped (2026-04-18). v0.7 next.
+> Status: v0.6 shipped 2026-04-18. v0.7 shipped 2026-04-18. v0.8 shipped 2026-04-18. v0.9 next.
 
 ---
 
@@ -723,17 +723,19 @@ Each phase is independently shippable. All existing overlays must work after eve
 
 ### v0.8 -- Session Presets (Tier 1-B)
 **Goal**: Auto-switch layout and column selection based on session type.
+**Status**: SHIPPED 2026-04-18
 
-| Item | Work |
-|------|------|
-| Session type change detection in `iracing.js` | Modified |
-| `session-type-change` IPC broadcast | `main.js` + `preload.js` |
-| Preset data model in store | `main.js` |
-| Preset management UI in `ControlPanel.jsx` | Modified |
-| Auto-apply preset on session type change | `ControlPanel.jsx` |
-| Preset applies visibility + column selection | Integrates v0.7 column system |
+| Item | Status | Notes |
+|------|--------|-------|
+| Session type change detection | Done | In `broadcastTelemetry` (main.js), not iracing.js -- cleaner |
+| `session-type-change` IPC broadcast | Done | main.js -> controlWindow only (overlays do not need it) |
+| Preset data model in store | Done | `app.presets.{practice,qualify,race}` + `app.autoPreset` |
+| Preset management UI | Done | 3-card grid in ControlPanel with SAVE/LOAD buttons per preset |
+| Auto-apply on session type change | Done | `app.autoPreset` toggle; applies in main.js before telemetry broadcast |
+| Preset applies visibility + column selection | Done | `applyPreset()` in main.js hides/shows windows + pushes overlay-settings-changed |
+| Auto toggle in ControlPanel | Done | Mini toggle labeled AUTO; state persisted |
 
-**Complexity**: M.
+**Deviations**: Session type change detection placed in `broadcastTelemetry` in main.js rather than iracing.js -- avoids modifying the bridge and gets the data from the already-parsed telemetry. Change is detected on first frame difference (not on first frame to avoid false trigger at startup). Preset keys: `practice` (Practice, Offline Testing), `qualify` (Qualify, Lone Qualify), `race` (Race + fallback).
 
 ---
 

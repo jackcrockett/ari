@@ -10,6 +10,7 @@ let layoutEditorWindow = null
 let overlayWindows     = {}
 let iracingSDK         = null
 let Store              = null
+let lastSessionType    = null   // tracks last seen sessionType for change detection
 
 async function loadStore() {
   try {
@@ -305,8 +306,87 @@ ipcMain.handle('reset-overlay-positions', () => {
   })
 })
 
+// ─── IPC: Presets ───────────────────────────────────────────────────────────
+ipcMain.handle('get-presets',     ()                  => store ? store.get('app.presets') || {} : {})
+ipcMain.handle('apply-preset',    (event, key)        => applyPreset(key))
+ipcMain.handle('get-auto-preset', ()                  => store ? store.get('app.autoPreset') || false : false)
+ipcMain.handle('set-auto-preset', (event, enabled)    => { if (store) store.set('app.autoPreset', enabled) })
+
+ipcMain.handle('save-preset', (event, key, preset) => {
+  if (!store) return
+  const all = store.get('app.presets') || {}
+  all[key] = { ...preset, saved: true }
+  store.set('app.presets', all)
+})
+
+// ─── Preset helpers ─────────────────────────────────────────────────────────
+function toPresetKey(sessionType) {
+  const t = (sessionType || '').toLowerCase()
+  if (t.includes('qualify')) return 'qualify'
+  if (t.includes('practice') || t.includes('offline')) return 'practice'
+  return 'race'
+}
+
+function applyPreset(key) {
+  if (!store) return
+  const presets = store.get('app.presets') || {}
+  const preset  = presets[key]
+  if (!preset || !preset.saved) return
+
+  const targetIds = new Set(preset.activeOverlays || [])
+
+  // Hide overlays that are not in the preset
+  Object.entries(overlayWindows).forEach(([id, win]) => {
+    if (!win || win.isDestroyed()) return
+    if (targetIds.has(id)) {
+      if (!win.isVisible()) win.show()
+    } else {
+      if (win.isVisible()) win.hide()
+    }
+  })
+
+  // Create windows for preset overlays that do not exist yet
+  preset.activeOverlays.forEach(id => {
+    if (OVERLAY_DEFAULTS[id]) {
+      const win = overlayWindows[id]
+      if (!win || win.isDestroyed()) createOverlayWindow(id, getSavedConfig(id))
+    }
+  })
+
+  // Persist active overlays
+  store.set('app.activeOverlays', preset.activeOverlays)
+
+  // Apply per-overlay column/content settings
+  const overlaySettings = preset.overlaySettings || {}
+  Object.entries(overlaySettings).forEach(([id, settings]) => {
+    store.set('overlay.' + id + '.content', settings)
+    const win = overlayWindows[id]
+    if (win && !win.isDestroyed()) win.webContents.send('overlay-settings-changed', id, settings)
+  })
+
+  // Notify control panel so its toggle state re-syncs
+  if (controlWindow && !controlWindow.isDestroyed())
+    controlWindow.webContents.send('preset-applied', key, preset)
+
+  console.log('[ARI] Preset applied:', key, '(' + (preset.activeOverlays || []).length + ' overlays)')
+}
+
 // ─── Telemetry Broadcast ────────────────────────────────────────────────────
 function broadcastTelemetry(data) {
+  // Detect session type changes and auto-apply matching preset
+  const incoming = data.telemetry?.sessionType
+  if (incoming && incoming !== lastSessionType) {
+    const prev = lastSessionType
+    lastSessionType = incoming
+    const key = toPresetKey(incoming)
+    if (prev !== null) {   // skip the very first frame -- not a real transition
+      if (controlWindow && !controlWindow.isDestroyed())
+        controlWindow.webContents.send('session-type-change', { sessionType: incoming, presetKey: key })
+      if (store && (store.get('app.autoPreset') || false))
+        applyPreset(key)
+    }
+  }
+
   if (controlWindow && !controlWindow.isDestroyed())
     controlWindow.webContents.send('telemetry-update', data)
   Object.values(overlayWindows).forEach(win => {

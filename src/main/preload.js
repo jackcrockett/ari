@@ -52,4 +52,15 @@ contextBridge.exposeInMainWorld('ari', {
   requestOpenSettings:         (id)       => ipcRenderer.invoke('request-open-settings', id),
   onOpenSettings:              (cb)       => ipcRenderer.on('open-overlay-settings', (e, id) => cb(id)),
   removeOpenSettingsListener:  ()         => ipcRenderer.removeAllListeners('open-overlay-settings'),
+
+  // Session presets
+  getPresets:                    ()            => ipcRenderer.invoke('get-presets'),
+  savePreset:                    (key, preset) => ipcRenderer.invoke('save-preset', key, preset),
+  applyPreset:                   (key)         => ipcRenderer.invoke('apply-preset', key),
+  getAutoPreset:                 ()            => ipcRenderer.invoke('get-auto-preset'),
+  setAutoPreset:                 (enabled)     => ipcRenderer.invoke('set-auto-preset', enabled),
+  onSessionTypeChange:           (cb)          => ipcRenderer.on('session-type-change', (e, d) => cb(d)),
+  removeSessionTypeListener:     ()            => ipcRenderer.removeAllListeners('session-type-change'),
+  onPresetApplied:               (cb)          => ipcRenderer.on('preset-applied', (e, key, p) => cb(key, p)),
+  removePresetAppliedListener:   ()            => ipcRenderer.removeAllListeners('preset-applied'),
 })

@@ -108,10 +108,16 @@ function TitleBarBtn({ children, onClick, label, isClose }) {
   )
 }
 
+const PRESET_KEYS = ['practice', 'qualify', 'race']
+const PRESET_LABELS = { practice: 'Practice', qualify: 'Qualify', race: 'Race' }
+
 export default function ControlPanel() {
   const { data, connected } = useTelemetry()
   const [activeOverlays,  setActiveOverlays]  = useState({})
-  const [settingsOverlay, setSettingsOverlay] = useState(null) // id of overlay whose columns are open
+  const [settingsOverlay, setSettingsOverlay] = useState(null)
+  const [presets,         setPresets]         = useState({})
+  const [autoPreset,      setAutoPresetState] = useState(false)
+  const [currentPresetKey, setCurrentPresetKey] = useState(null)
   const hasElectron = typeof window !== 'undefined' && window.ari
 
   // Restore persisted active-overlay state on mount
@@ -124,12 +130,66 @@ export default function ControlPanel() {
     })
   }, [hasElectron])
 
+  // Load presets and auto-preset setting on mount
+  useEffect(() => {
+    if (!hasElectron) return
+    window.ari.getPresets().then(p => setPresets(p || {}))
+    window.ari.getAutoPreset().then(v => setAutoPresetState(v || false))
+  }, [hasElectron])
+
   // Listen for overlay settings requests (gear icon in overlay DragHandle)
   useEffect(() => {
     if (!hasElectron) return
     window.ari.onOpenSettings(id => setSettingsOverlay(id))
     return () => window.ari.removeOpenSettingsListener()
   }, [hasElectron])
+
+  // Track current session type for preset highlighting
+  useEffect(() => {
+    if (!hasElectron) return
+    window.ari.onSessionTypeChange(({ presetKey }) => setCurrentPresetKey(presetKey))
+    return () => window.ari.removeSessionTypeListener()
+  }, [hasElectron])
+
+  // Sync UI when a preset is auto-applied from main process
+  useEffect(() => {
+    if (!hasElectron) return
+    window.ari.onPresetApplied((key, preset) => {
+      const state = {}
+      ;(preset.activeOverlays || []).forEach(id => { state[id] = true })
+      setActiveOverlays(state)
+    })
+    return () => window.ari.removePresetAppliedListener()
+  }, [hasElectron])
+
+  const saveCurrentAsPreset = async (key) => {
+    const activeIds = Object.keys(activeOverlays).filter(id => activeOverlays[id])
+    const overlaySettings = {}
+    if (hasElectron) {
+      for (const id of Array.from(COLUMN_PICKER_OVERLAYS)) {
+        const s = await window.ari.getOverlaySettings(id)
+        if (s) overlaySettings[id] = s
+      }
+    }
+    const preset = { activeOverlays: activeIds, overlaySettings }
+    if (hasElectron) await window.ari.savePreset(key, preset)
+    setPresets(prev => ({ ...prev, [key]: { ...preset, saved: true } }))
+  }
+
+  const applyPreset = async (key) => {
+    if (!hasElectron) return
+    await window.ari.applyPreset(key)
+    const ids = await window.ari.getActiveOverlays()
+    const state = {}
+    ids.forEach(id => { state[id] = true })
+    setActiveOverlays(state)
+  }
+
+  const toggleAutoPreset = async () => {
+    const next = !autoPreset
+    setAutoPresetState(next)
+    if (hasElectron) await window.ari.setAutoPreset(next)
+  }
 
   const toggleOverlay = async (id) => {
     const isActive = activeOverlays[id]
@@ -266,6 +326,98 @@ export default function ControlPanel() {
           ))}
         </div>
       )}
+
+      {/* Session Presets */}
+      <div style={{ padding: '10px 18px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+            Presets
+          </span>
+          <button
+            onClick={toggleAutoPreset}
+            title={autoPreset ? 'Auto-apply on: click to disable' : 'Auto-apply off: click to enable'}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+            }}
+          >
+            <div style={{
+              width: 24, height: 13, borderRadius: 7, position: 'relative',
+              background: autoPreset ? '#22C55E' : 'rgba(255,255,255,0.12)',
+              transition: 'background 0.2s',
+            }}>
+              <div style={{
+                position: 'absolute', top: 2, left: autoPreset ? 13 : 2,
+                width: 9, height: 9, borderRadius: '50%', background: '#fff',
+                transition: 'left 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.4)',
+              }} />
+            </div>
+            <span style={{ fontSize: 9, color: autoPreset ? '#22C55E' : 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-data)', letterSpacing: '0.08em' }}>
+              AUTO
+            </span>
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6 }}>
+          {PRESET_KEYS.map(key => {
+            const preset   = presets[key] || {}
+            const isCurrent = key === currentPresetKey
+            const isSaved   = !!preset.saved
+            return (
+              <div
+                key={key}
+                style={{
+                  background: isCurrent ? 'rgba(34,197,94,0.07)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${isCurrent ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                  borderRadius: 5, padding: '6px 6px 5px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <span style={{
+                    fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 700,
+                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                    color: isCurrent ? '#22C55E' : 'rgba(255,255,255,0.5)',
+                  }}>
+                    {PRESET_LABELS[key]}
+                  </span>
+                  {isSaved && (
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#22C55E', flexShrink: 0 }} />
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button
+                    onClick={() => saveCurrentAsPreset(key)}
+                    title="Save current state to this preset"
+                    style={{
+                      flex: 1, fontSize: 8, cursor: 'pointer',
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 3, padding: '2px 0', color: 'rgba(255,255,255,0.45)',
+                      fontFamily: 'var(--font-data)', letterSpacing: '0.05em',
+                    }}
+                  >
+                    SAVE
+                  </button>
+                  <button
+                    onClick={() => isSaved && applyPreset(key)}
+                    title={isSaved ? 'Apply this preset' : 'No preset saved yet'}
+                    style={{
+                      flex: 1, fontSize: 8, cursor: isSaved ? 'pointer' : 'default',
+                      background: isSaved ? 'rgba(232,0,29,0.12)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${isSaved ? 'rgba(232,0,29,0.25)' : 'rgba(255,255,255,0.06)'}`,
+                      borderRadius: 3, padding: '2px 0',
+                      color: isSaved ? '#E8001D' : 'rgba(255,255,255,0.2)',
+                      fontFamily: 'var(--font-data)', letterSpacing: '0.05em',
+                    }}
+                  >
+                    LOAD
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
       {/* Column picker -- shown when a settings gear icon is clicked in an overlay */}
       {settingsOverlay && COLUMN_PICKER_OVERLAYS.has(settingsOverlay) ? (
