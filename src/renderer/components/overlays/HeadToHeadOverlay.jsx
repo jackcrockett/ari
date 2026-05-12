@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useTelemetry, formatLapTime } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 function Stat({ label, mine, theirs, lowerBetter = false }) {
   const mineN   = parseFloat(mine)
@@ -33,14 +32,12 @@ export default function HeadToHeadOverlay() {
 
   if (!player || !target || target === player) {
     return (
-      <ResizeHandles overlayId="headtohead">
-        <div className="overlay" style={{ width: 290 }}>
+        <div className="overlay" style={{ width: '100%' }}>
           <DragHandle overlayId="headtohead" label="Head to Head" />
           <div style={{ padding: '10px', fontFamily: 'var(--font-data)', fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
             No target driver
           </div>
         </div>
-      </ResizeHandles>
     )
   }
 
@@ -48,8 +45,7 @@ export default function HeadToHeadOverlay() {
   const gapSign = target.gapSeconds < 0 ? 'ahead' : 'behind'
 
   return (
-    <ResizeHandles overlayId="headtohead">
-      <div className="overlay" style={{ width: 290 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="headtohead" label="Head to Head" />
 
         {/* Driver headers */}
@@ -107,6 +103,5 @@ export default function HeadToHeadOverlay() {
           </div>
         </div>
       </div>
-    </ResizeHandles>
   )
 }

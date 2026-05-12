@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useTelemetry, formatLapTime } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 const BLOCKS = [
   { id: 'gear',    label: 'GEAR',   get: d => d?.gear ?? '—',                           size: 'xl' },
@@ -26,8 +25,7 @@ export default function DataBlocksOverlay() {
   const shown = BLOCKS.filter(b => selected.includes(b.id))
 
   return (
-    <ResizeHandles overlayId="datablocks">
-      <div className="overlay" style={{ width: 210 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="datablocks" label="Data Blocks">
           <span onClick={() => setEditing(e => !e)} style={{
             fontFamily: 'var(--font-data)', fontSize: 8, cursor: 'pointer',
@@ -63,6 +61,5 @@ export default function DataBlocksOverlay() {
           </div>
         )}
       </div>
-    </ResizeHandles>
   )
 }

@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react'
 import { useTelemetry, formatLapTime } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 export default function LapTimeLogOverlay() {
   const { data } = useTelemetry()
@@ -35,8 +34,7 @@ export default function LapTimeLogOverlay() {
   const bestTime = laps.length ? Math.min(...laps.map(l => l.time)) : 0
 
   return (
-    <ResizeHandles overlayId="laplog">
-      <div className="overlay" style={{ width: 268 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="laplog" label="Lap Log">
           <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>
             {laps.length} laps
@@ -77,6 +75,5 @@ export default function LapTimeLogOverlay() {
           )}
         </div>
       </div>
-    </ResizeHandles>
   )
 }

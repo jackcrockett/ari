@@ -17,8 +17,8 @@ export const VARIANTS = {
     rowPaddingH:      10,      // left + right padding px
     gap:              6,       // gap between cells px
     showRowBorder:    true,    // bottom border between rows
-    leftAccentMode:   'player', // 'player' = red for player only | 'all' = each driver's colour
-    playerBgOpacity:  0.08,   // player row background red opacity
+    leftAccentMode:   'player', // 'player' = amber for player only | 'all' = each driver's colour
+    playerBgOpacity:  0.10,   // player row background amber opacity
   },
 
   compact: {
@@ -29,7 +29,7 @@ export const VARIANTS = {
     gap:              4,
     showRowBorder:    true,
     leftAccentMode:   'player',
-    playerBgOpacity:  0.08,
+    playerBgOpacity:  0.10,
   },
 
   broadcast: {

@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { useTelemetry, formatLapTime } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 export default function LaptimeSpreadOverlay() {
   const { data } = useTelemetry()
@@ -65,8 +64,7 @@ export default function LaptimeSpreadOverlay() {
   const playerRank = playerTime ? times.sort((a,b)=>a-b).indexOf(playerTime) + 1 : null
 
   return (
-    <ResizeHandles overlayId="laptimespread">
-      <div className="overlay" style={{ width: 268 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="laptimespread" label="Lap Time Spread">
           {playerRank && (
             <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>
@@ -78,6 +76,5 @@ export default function LaptimeSpreadOverlay() {
           <canvas ref={canvasRef} width={260} height={60} style={{ display: 'block', width: '100%' }} />
         </div>
       </div>
-    </ResizeHandles>
   )
 }

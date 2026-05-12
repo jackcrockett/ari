@@ -11,7 +11,7 @@
  */
 
 import React from 'react'
-import { formatGap, formatLapTime, licenseColor } from '../hooks/useTelemetry'
+import { formatGap, formatLapTime, licenseColor, licenseTextColor } from '../hooks/useTelemetry'
 
 export const DRIVER_COLOURS = [
   '#F59E0B','#64748B','#3B82F6','#FF6B35',
@@ -22,17 +22,48 @@ function colourFor(driver) {
   return driver.colour || DRIVER_COLOURS[driver.carIdx % DRIVER_COLOURS.length]
 }
 
+// iRating badge — license-colored background
+function iRatingBadge(driver) {
+  const ir    = driver.iRating || 0
+  const label = ir >= 1000 ? `${(ir / 1000).toFixed(1)}k` : (ir > 0 ? String(ir) : '--')
+  const bg    = licenseColor(driver.licenseString || 'D')
+  const pg    = driver.positionsGained
+  const hasDelta = pg != null && pg !== 0
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+      <span style={{
+        fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
+        background: bg, color: '#fff',
+        padding: '1px 4px', borderRadius: 2,
+        display: 'inline-block', letterSpacing: '0.02em',
+        whiteSpace: 'nowrap',
+      }}>
+        {label}
+      </span>
+      {hasDelta && (
+        <span style={{
+          fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700,
+          color: pg > 0 ? '#22C55E' : '#E8001D',
+          lineHeight: 1,
+        }}>
+          {pg > 0 ? '▲' : '▼'}{Math.abs(pg)}
+        </span>
+      )}
+    </div>
+  )
+}
+
 // ─── Column definitions ───────────────────────────────────────────────────────
 
 export const COLUMN_DEFS = {
 
   position: {
     label: 'Pos',
-    width: 20,
+    width: 22,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-data)', fontSize: 11, fontWeight: 600,
-        color: driver.isPlayer ? '#E8001D' : 'rgba(255,255,255,0.3)',
+        fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 700,
+        color: driver.isPlayer ? '#F59E0B' : 'rgba(255,255,255,0.85)',
         display: 'block', textAlign: 'right',
       }}>
         {driver.position}
@@ -45,8 +76,8 @@ export const COLUMN_DEFS = {
     width: 20,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-data)', fontSize: 10,
-        color: 'rgba(255,255,255,0.35)',
+        fontFamily: 'var(--font-data)', fontSize: 10, fontWeight: 600,
+        color: 'rgba(255,255,255,0.4)',
         display: 'block', textAlign: 'right',
       }}>
         {driver.classPosition ?? '--'}
@@ -56,25 +87,26 @@ export const COLUMN_DEFS = {
 
   colorDot: {
     label: '',
-    width: 12,
+    width: 10,
     renderCell: (driver) => (
       <div style={{
-        width: 7, height: 7, borderRadius: '50%',
+        width: 3, height: 16, borderRadius: 2,
         background: colourFor(driver), margin: 'auto',
+        flexShrink: 0,
       }} />
     ),
   },
 
   carNumber: {
     label: '#',
-    width: 28,
+    width: 30,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-data)', fontSize: 10,
-        color: 'rgba(255,255,255,0.5)',
+        fontFamily: 'var(--font-data)', fontSize: 11, fontWeight: 700,
+        color: colourFor(driver),
         display: 'block',
       }}>
-        {driver.carNumber ?? '--'}
+        #{driver.carNumber ?? '--'}
       </span>
     ),
   },
@@ -84,11 +116,11 @@ export const COLUMN_DEFS = {
     width: null, // flex-1
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-data)', fontSize: 12,
-        fontWeight: driver.isPlayer ? 600 : 400,
-        color: driver.isPlayer ? '#fff' : 'rgba(255,255,255,0.72)',
+        fontFamily: 'var(--font-data)', fontSize: 13,
+        fontWeight: driver.isPlayer ? 800 : 600,
+        color: driver.isPlayer ? '#fff' : 'rgba(255,255,255,0.82)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        display: 'block',
+        display: 'block', letterSpacing: '0.01em',
       }}>
         {driver.driverName}
       </span>
@@ -97,31 +129,44 @@ export const COLUMN_DEFS = {
 
   license: {
     label: 'Lic',
-    width: 26,
+    width: 48,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 700,
+        fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 800,
         background: licenseColor(driver.licenseString),
-        color: '#fff', padding: '1px 3px', borderRadius: 2,
-        display: 'inline-block',
+        color: licenseTextColor(driver.licenseString),
+        padding: '1px 5px', borderRadius: 2,
+        display: 'inline-block', letterSpacing: '0.04em',
+        whiteSpace: 'nowrap',
       }}>
-        {driver.licenseString}
+        {driver.licenseString}{driver.safetyRating != null ? ` ${driver.safetyRating.toFixed(2)}` : ''}
       </span>
     ),
   },
 
   iRating: {
     label: 'iR',
-    width: 36,
-    renderCell: (driver) => (
-      <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 10,
-        color: 'rgba(255,255,255,0.35)',
-        display: 'block', textAlign: 'right',
-      }}>
-        {driver.iRating >= 1000 ? `${(driver.iRating / 1000).toFixed(1)}k` : driver.iRating}
-      </span>
-    ),
+    width: 52,
+    renderCell: (driver) => iRatingBadge(driver),
+  },
+
+  trackStatus: {
+    label: '',
+    width: 28,
+    renderCell: (driver) => {
+      const surf = driver.trackSurface
+      if (surf === 2 || surf === 3) return (
+        <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 700, color: '#F59E0B', letterSpacing: '0.02em' }}>pit</span>
+      )
+      if (surf === 5) return (
+        <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 600, color: 'rgba(255,255,255,0.38)' }}>
+          L{driver.currentLap ?? '--'}
+        </span>
+      )
+      return (
+        <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 600, color: 'rgba(255,255,255,0.22)' }}>out</span>
+      )
+    },
   },
 
   carClass: {
@@ -129,8 +174,8 @@ export const COLUMN_DEFS = {
     width: 44,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-data)', fontSize: 9,
-        color: 'rgba(255,255,255,0.4)',
+        fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 600,
+        color: 'rgba(255,255,255,0.45)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         display: 'block',
       }}>
@@ -139,17 +184,41 @@ export const COLUMN_DEFS = {
     ),
   },
 
+  // Colored class badge — uses driver.colour (car class color from iRacing)
+  carClassBadge: {
+    label: 'CL',
+    width: 36,
+    renderCell: (driver) => {
+      if (!driver.carClass) return null
+      const bg = colourFor(driver)
+      return (
+        <span style={{
+          fontFamily: 'var(--font-data)', fontSize: 8, fontWeight: 800,
+          background: bg + '33',
+          color: bg,
+          border: `1px solid ${bg}55`,
+          padding: '1px 4px', borderRadius: 2,
+          display: 'inline-block', letterSpacing: '0.04em',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          maxWidth: 34,
+        }}>
+          {driver.carClass}
+        </span>
+      )
+    },
+  },
+
   // gap: relative to the player car (used in Relative overlay)
   gap: {
     label: 'Gap',
-    width: 54,
+    width: 52,
     renderCell: (driver) => {
       if (driver.isPlayer) {
         return (
           <span style={{
-            fontFamily: 'var(--font-mono)', fontSize: 11,
-            color: 'rgba(255,255,255,0.3)',
-            display: 'block', textAlign: 'right',
+            fontFamily: 'var(--font-data)', fontSize: 10, fontWeight: 700,
+            color: '#F59E0B',
+            display: 'block', textAlign: 'right', letterSpacing: '0.06em',
           }}>
             YOU
           </span>
@@ -158,9 +227,11 @@ export const COLUMN_DEFS = {
       const isAhead = driver.gapSeconds < 0
       return (
         <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 500,
-          color: isAhead ? '#94D2BD' : '#F59E0B',
+          fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700,
+          color: isAhead ? '#2DD4BF' : '#F59E0B',
           display: 'block', textAlign: 'right',
+          fontVariantNumeric: 'tabular-nums',
+          transition: 'color 0.3s ease',
         }}>
           {formatGap(driver.gapSeconds)}
         </span>
@@ -171,16 +242,17 @@ export const COLUMN_DEFS = {
   // gapToLeader: gap to race leader (used in Standings overlay)
   gapToLeader: {
     label: 'Gap',
-    width: 58,
+    width: 56,
     renderCell: (driver) => {
       const isLeader = driver.gapToLeader === 0
       return (
         <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 11,
-          color: isLeader ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)',
+          fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700,
+          color: isLeader ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.75)',
           display: 'block', textAlign: 'right',
+          fontVariantNumeric: 'tabular-nums',
         }}>
-          {isLeader ? 'Leader' : driver.gapToLeader != null ? formatGap(driver.gapToLeader) : '--'}
+          {isLeader ? '—' : driver.gapToLeader != null ? formatGap(driver.gapToLeader) : '--'}
         </span>
       )
     },
@@ -188,11 +260,11 @@ export const COLUMN_DEFS = {
 
   intervalToNext: {
     label: 'Int',
-    width: 54,
+    width: 52,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 11,
-        color: 'rgba(255,255,255,0.5)',
+        fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600,
+        color: 'rgba(255,255,255,0.55)',
         display: 'block', textAlign: 'right',
       }}>
         {driver.intervalToNext != null ? formatGap(driver.intervalToNext) : '--'}
@@ -202,11 +274,11 @@ export const COLUMN_DEFS = {
 
   lastLapTime: {
     label: 'Last',
-    width: 62,
+    width: 64,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 11,
-        color: 'rgba(255,255,255,0.5)',
+        fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600,
+        color: 'rgba(255,255,255,0.65)',
         display: 'block', textAlign: 'right',
       }}>
         {formatLapTime(driver.lastLapTime)}
@@ -216,11 +288,11 @@ export const COLUMN_DEFS = {
 
   bestLapTime: {
     label: 'Best',
-    width: 62,
+    width: 64,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 11,
-        color: driver.isFastestLap ? '#C084FC' : 'rgba(255,255,255,0.5)',
+        fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600,
+        color: driver.isFastestLap ? '#C084FC' : 'rgba(255,255,255,0.55)',
         display: 'block', textAlign: 'right',
       }}>
         {formatLapTime(driver.bestLapTime)}
@@ -230,10 +302,10 @@ export const COLUMN_DEFS = {
 
   estimatedLapTime: {
     label: 'Est',
-    width: 62,
+    width: 64,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 11,
+        fontFamily: 'var(--font-mono)', fontSize: 12,
         color: 'rgba(255,255,255,0.4)',
         display: 'block', textAlign: 'right',
       }}>
@@ -244,12 +316,14 @@ export const COLUMN_DEFS = {
 
   pitStatus: {
     label: 'Pit',
-    width: 30,
+    width: 32,
     renderCell: (driver) => driver.onPitRoad ? (
       <span style={{
-        fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 700,
-        color: '#F59E0B', background: 'rgba(245,158,11,0.12)',
+        fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 800,
+        color: '#F59E0B', background: 'rgba(245,158,11,0.15)',
+        border: '1px solid rgba(245,158,11,0.3)',
         padding: '1px 4px', borderRadius: 2, display: 'inline-block',
+        letterSpacing: '0.06em',
       }}>
         PIT
       </span>
@@ -261,8 +335,8 @@ export const COLUMN_DEFS = {
     width: 22,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 10,
-        color: 'rgba(255,255,255,0.35)',
+        fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
+        color: 'rgba(255,255,255,0.4)',
         display: 'block', textAlign: 'right',
       }}>
         {driver.pitStopCount ?? 0}
@@ -289,8 +363,8 @@ export const COLUMN_DEFS = {
     width: 28,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 10,
-        color: 'rgba(255,255,255,0.45)',
+        fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600,
+        color: 'rgba(255,255,255,0.5)',
         display: 'block', textAlign: 'right',
       }}>
         {driver.currentLap ?? '--'}
@@ -303,8 +377,8 @@ export const COLUMN_DEFS = {
     width: 28,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 10,
-        color: 'rgba(255,255,255,0.45)',
+        fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 600,
+        color: 'rgba(255,255,255,0.5)',
         display: 'block', textAlign: 'right',
       }}>
         {driver.lapsCompleted ?? '--'}
@@ -320,8 +394,8 @@ export const COLUMN_DEFS = {
       const label = raw == null || raw === 0 ? '--' : String(raw)
       return (
         <span style={{
-          fontFamily: 'var(--font-data)', fontSize: 9,
-          color: 'rgba(255,255,255,0.4)',
+          fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 600,
+          color: 'rgba(255,255,255,0.45)',
           display: 'block', textAlign: 'center',
         }}>
           {label}
@@ -343,12 +417,12 @@ export const COLUMN_DEFS = {
 
   incidentCount: {
     label: 'Inc',
-    width: 24,
+    width: 26,
     renderCell: (driver) => {
       const inc = driver.incidentCount ?? 0
       return (
         <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10,
+          fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700,
           color: inc > 0 ? '#F59E0B' : 'rgba(255,255,255,0.25)',
           display: 'block', textAlign: 'right',
         }}>
@@ -365,7 +439,7 @@ export const COLUMN_DEFS = {
       <div style={{
         width: 7, height: 7, borderRadius: '50%',
         background: '#C084FC', margin: 'auto',
-        boxShadow: '0 0 4px #C084FC',
+        boxShadow: '0 0 5px #C084FC',
       }} />
     ) : (
       <div style={{ width: 7, height: 7 }} />
@@ -374,7 +448,7 @@ export const COLUMN_DEFS = {
 
   positionsGained: {
     label: '+/-',
-    width: 28,
+    width: 30,
     renderCell: (driver) => {
       const pg = driver.positionsGained
       if (pg == null) {
@@ -384,18 +458,19 @@ export const COLUMN_DEFS = {
             color: 'rgba(255,255,255,0.2)',
             display: 'block', textAlign: 'right',
           }}>
-            --
+            —
           </span>
         )
       }
       const color = pg > 0 ? '#22C55E' : pg < 0 ? '#E8001D' : 'rgba(255,255,255,0.25)'
-      const prefix = pg > 0 ? '+' : ''
+      const arrow = pg > 0 ? '▲' : pg < 0 ? '▼' : '·'
       return (
         <span style={{
-          fontFamily: 'var(--font-mono)', fontSize: 10,
-          color, display: 'block', textAlign: 'right',
+          fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700,
+          color, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1,
         }}>
-          {prefix}{pg}
+          <span style={{ fontSize: 8 }}>{arrow}</span>
+          {pg !== 0 ? Math.abs(pg) : ''}
         </span>
       )
     },
@@ -406,7 +481,7 @@ export const COLUMN_DEFS = {
     width: 72,
     renderCell: (driver) => (
       <span style={{
-        fontFamily: 'var(--font-data)', fontSize: 9,
+        fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 500,
         color: 'rgba(255,255,255,0.35)',
         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         display: 'block',
@@ -421,7 +496,7 @@ export const COLUMN_DEFS = {
 // ─── Column groups (for picker UI) ───────────────────────────────────────────
 
 export const COLUMN_GROUPS = [
-  { label: 'Identity',      ids: ['position', 'classPosition', 'colorDot', 'carNumber', 'driverName', 'license', 'iRating', 'carClass'] },
+  { label: 'Identity',      ids: ['position', 'classPosition', 'colorDot', 'carNumber', 'driverName', 'license', 'iRating', 'trackStatus', 'carClass', 'carClassBadge'] },
   { label: 'Gaps',          ids: ['gap', 'gapToLeader', 'intervalToNext'] },
   { label: 'Lap Times',     ids: ['lastLapTime', 'bestLapTime', 'estimatedLapTime'] },
   { label: 'Pit/Strategy',  ids: ['pitStatus', 'pitStopCount', 'fastRepairs', 'tyreCompound'] },
@@ -433,8 +508,8 @@ export const COLUMN_GROUPS = [
 // ─── Default column sets per overlay ─────────────────────────────────────────
 
 export const DEFAULT_COLUMNS = {
-  standings:   ['position', 'colorDot', 'driverName', 'pitStatus', 'gapToLeader'],
-  relative:    ['position', 'colorDot', 'license', 'driverName', 'iRating', 'gap'],
+  standings:   ['position', 'carNumber', 'driverName', 'positionsGained', 'iRating', 'gapToLeader', 'lastLapTime'],
+  relative:    ['position', 'carNumber', 'driverName', 'trackStatus', 'iRating', 'gap'],
   leaderboard: ['position', 'colorDot', 'driverName', 'pitStatus', 'bestLapTime'],
 }
 

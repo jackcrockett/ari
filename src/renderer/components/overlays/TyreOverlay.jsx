@@ -1,19 +1,17 @@
-import React, { useEffect, useRef } from 'react'
+import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 // Temperature colour: blue (cold) → green (optimal) → red (hot)
-// Optimal GT3 range roughly 80–100°C
 function tempColour(t) {
-  if (t == null || isNaN(t)) return 'rgba(255,255,255,0.15)'
-  if (t < 40)  return '#3B82F6'   // cold blue
-  if (t < 65)  return '#60A5FA'   // warming blue
-  if (t < 80)  return '#34D399'   // building green
-  if (t < 95)  return '#22C55E'   // optimal green
-  if (t < 110) return '#FACC15'   // hot yellow
-  if (t < 130) return '#F97316'   // very hot orange
-  return '#EF4444'                 // overheating red
+  if (t == null || isNaN(t)) return 'rgba(255,255,255,0.12)'
+  if (t < 40)  return '#3B82F6'
+  if (t < 65)  return '#60A5FA'
+  if (t < 80)  return '#34D399'
+  if (t < 95)  return '#22C55E'
+  if (t < 110) return '#FACC15'
+  if (t < 130) return '#F97316'
+  return '#EF4444'
 }
 
 function wearColour(w) {
@@ -40,15 +38,15 @@ function TyreCorner({ label, tyre, flip }) {
   const tL = tyre.tempL, tM = tyre.tempM, tR = tyre.tempR
   const wear = avgWear(tyre)
   const avg = avgTemp(tyre)
-  const psi = tyre.pressure ? (tyre.pressure * 0.145038).toFixed(1) : '--'  // Pa → PSI
+  const psi = tyre.pressure ? (tyre.pressure * 0.145038).toFixed(1) : '--'
 
   // Zone order: outer → middle → inner (flip for right-side tyres)
   const zones = flip ? [tR, tM, tL] : [tL, tM, tR]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: 54 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 58 }}>
       {/* Corner label */}
-      <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.08em' }}>
+      <span style={{ fontFamily: 'var(--font-data)', fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.1em' }}>
         {label}
       </span>
 
@@ -56,12 +54,12 @@ function TyreCorner({ label, tyre, flip }) {
       <div style={{ display: 'flex', gap: 2, width: '100%' }}>
         {zones.map((t, i) => (
           <div key={i} style={{
-            flex: 1, height: 48, borderRadius: 3,
+            flex: 1, height: 52, borderRadius: 3,
             background: tempColour(t),
             display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
             paddingBottom: 3,
           }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 7, color: 'rgba(0,0,0,0.7)', fontWeight: 700 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'rgba(0,0,0,0.75)', fontWeight: 800 }}>
               {t != null ? Math.round(t) : '--'}
             </span>
           </div>
@@ -69,7 +67,7 @@ function TyreCorner({ label, tyre, flip }) {
       </div>
 
       {/* Avg temp */}
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: avg ? tempColour(avg) : 'rgba(255,255,255,0.2)', fontWeight: 700 }}>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 800, color: avg ? tempColour(avg) : 'rgba(255,255,255,0.2)', lineHeight: 1 }}>
         {avg != null ? Math.round(avg) + '°' : '--°'}
       </span>
 
@@ -83,12 +81,12 @@ function TyreCorner({ label, tyre, flip }) {
       </div>
 
       {/* Wear % */}
-      <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: wearColour(wear) }}>
+      <span style={{ fontFamily: 'var(--font-data)', fontSize: 10, fontWeight: 700, color: wearColour(wear) }}>
         {wear != null ? Math.round(wear * 100) + '%' : '--'}
       </span>
 
       {/* Pressure */}
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'rgba(255,255,255,0.35)' }}>
         {psi} psi
       </span>
     </div>
@@ -110,41 +108,38 @@ export default function TyreOverlay() {
   const isDemo = !tyres
 
   return (
-    <ResizeHandles overlayId="tyres">
-      <div className="overlay" style={{ width: 250 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="tyres" label="Tyres">
-          <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            {isDemo ? 'Demo' : 'Live'}
+          <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, fontWeight: 700, color: isDemo ? '#F59E0B' : '#22C55E', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            {isDemo ? 'DEMO' : 'LIVE'}
           </span>
         </DragHandle>
 
         <div style={{ padding: '8px 10px 10px' }}>
-          {/* Legend */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-            {[['cold', '#3B82F6'], ['optimal', '#22C55E'], ['hot', '#EF4444']].map(([label, colour]) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          {/* Temp legend */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
+            {[['COLD', '#3B82F6'], ['OPTIMAL', '#22C55E'], ['HOT', '#EF4444']].map(([label, colour]) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <div style={{ width: 6, height: 6, borderRadius: 1, background: colour }} />
-                <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'rgba(255,255,255,0.3)' }}>{label}</span>
+                <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em' }}>{label}</span>
               </div>
             ))}
           </div>
 
           {/* 4 corners in car layout */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 14px' }}>
             <TyreCorner label="FL" tyre={t.LF} flip={false} />
             <TyreCorner label="FR" tyre={t.RF} flip={true} />
             <TyreCorner label="RL" tyre={t.LR} flip={false} />
             <TyreCorner label="RR" tyre={t.RR} flip={true} />
           </div>
 
-          {/* Wear note */}
           <div style={{ marginTop: 8, textAlign: 'center' }}>
-            <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'rgba(255,255,255,0.2)' }}>
-              wear updates at pit stop
+            <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, fontWeight: 600, color: 'rgba(255,255,255,0.2)', letterSpacing: '0.05em' }}>
+              WEAR UPDATES AT PIT STOP
             </span>
           </div>
         </div>
       </div>
-    </ResizeHandles>
   )
 }

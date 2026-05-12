@@ -77,7 +77,7 @@ The `pages/`, `telemetry/`, and `iracing_ui.py` files are a superseded Python-ba
 
 ## Critical iRacing Data Rules
 
-- **Brake**: iRacing sends 1=released, 0=fully pressed. `iracing.js` inverts at source: `data.brake = 1 - Brake`. Overlays use `data.brake` directly — do NOT invert again.
+- **Brake**: iRacing SDK sends Brake as 0=released, 1=fully pressed (same direction as Throttle). `iracing.js` passes through directly — no inversion. Overlays use `data.brake` directly — do NOT invert.
 - **Clutch**: iRacing sends 0=released, 1=fully pressed — `iracing.js` passes through raw. Overlays use `data.clutch` directly, no inversion.
 - **Throttle**: 0=idle, 1=full — use directly, no inversion
 - **SteeringWheelAngle**: positive=left in iRacing. `iracing.js` negates at source so `data.steering` positive = right. Overlays use `data.steering` directly — do NOT negate again.
@@ -109,7 +109,7 @@ Each entry in `data.relative[]` and `data.standings[]` now includes these additi
 
 ## Known Issues to Never Reintroduce
 
-- **Brake showing 100% at rest / 0% when pressed** = inversion applied twice or not at all — check that exactly one `1 - value` inversion exists in the data path
+- **Brake showing 100% at rest / 0% when pressed** = inversion wrongly applied in iracing.js — brake must NOT be inverted since the SDK already sends 0=released, 1=pressed
 - **Steering backwards / L-R label wrong** = negation applied in an overlay on top of iracing.js negation — overlays must use `data.steering` directly, no extra negation
 - **InputsOverlay** must be a wide horizontal rectangle (default width 360px), not square
 - **`SAMPLES` variable** was removed from `TrackMapOverlay` — do not re-add it

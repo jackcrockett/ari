@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 // Schematic oval/circuit approximation using lapDistPct only — no GPS needed.
 // Generates a smooth closed oval path and places cars along it by pct.
@@ -97,8 +96,7 @@ export default function FlatMapOverlay() {
   }, [drivers])
 
   return (
-    <ResizeHandles overlayId="flatmap">
-      <div className="overlay" style={{ width: 190 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="flatmap" label="Flat Map">
           <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             {trackName}
@@ -108,6 +106,5 @@ export default function FlatMapOverlay() {
           <canvas ref={canvasRef} width={182} height={165} style={{ display: 'block', width: '100%' }} />
         </div>
       </div>
-    </ResizeHandles>
   )
 }

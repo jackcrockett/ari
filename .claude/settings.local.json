@@ -15,7 +15,32 @@
       "Bash(findstr /I \"electron.exe\\\\|ari_bridge.exe\")",
       "Bash(findstr \":5173 \")",
       "Bash(node:*)",
-      "Bash(ls C:/Projects/ari/*.png)"
+      "Bash(ls C:/Projects/ari/*.png)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git:*)",
+      "Bash(grep -n \"!connected\\\\|!data\\\\b\\\\|waiting\\\\|Waiting\" /c/Projects/ari/src/renderer/components/overlays/*.jsx)",
+      "Bash(grep:*)",
+      "Read(//c/Users/jackc/**)",
+      "Bash(reg query:*)",
+      "Bash(cmd.exe /c \"where iRacingSim64DX11.exe 2>nul\" cmd.exe /c \"dir /s /b \\\\\"C:\\\\\\\\iRacing*.exe\\\\\" 2>nul\")",
+      "Bash(cmd.exe:*)",
+      "Read(//d//**)",
+      "Read(//e//**)",
+      "Bash(npx asar:*)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Read(//c/Program Files/**)",
+      "Bash(xxd \"/d/SteamLibrary/steamapps/common/iRacing/tracks/bathurst/bathurst.dat\")",
+      "Bash(cp \"/c/Users/jackc/AppData/Roaming/iracing-electron/Cache/Cache_Data/f_00003b\" \"/tmp/cache_3b.png\")",
+      "Bash(cp \"/c/Users/jackc/AppData/Roaming/iracing-electron/Cache/Cache_Data/f_000047\" \"/tmp/cache_47.png\")",
+      "Bash(cp \"/c/Users/jackc/AppData/Roaming/iracing-electron/Cache/Cache_Data/f_000048\" \"/tmp/cache_48.png\")",
+      "Bash(python3 -c ':*)",
+      "Bash(cp \"C:/Users/jackc/AppData/Roaming/iracing-electron/Cache/Cache_Data/f_0003ce\" \"C:/Projects/ari/Reference Photos/cache_3ce_508x272.png\")",
+      "Bash(cp \"C:/Users/jackc/AppData/Roaming/iracing-electron/Cache/Cache_Data/f_000343\" \"C:/Projects/ari/Reference Photos/cache_343_1022x700.png\")",
+      "Bash(cp \"C:/Users/jackc/AppData/Roaming/iracing-electron/Cache/Cache_Data/f_000047\" \"C:/Projects/ari/Reference Photos/cache_047_921x720.png\")",
+      "Bash(curl -s \"https://members-assets.iracing.com/public/track-maps/tracks_lanier/17-lanier/active.svg\")",
+      "Bash(curl -s 'https://members-assets.iracing.com/public/track-maps/tracks_vir/')",
+      "Bash(curl -s \"https://members-assets.iracing.com/public/track-maps/tracks_vir/$\\(curl -s 'https://members-assets.iracing.com/public/track-maps/tracks_vir/')"
     ]
   }
 }

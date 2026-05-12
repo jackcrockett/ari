@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useTelemetry, formatLapTime } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 const ALL_BLOCKS = [
   { id: 'gear',      label: 'GEAR',       get: d => d?.gear ?? '—' },
@@ -38,8 +37,7 @@ export default function AdvancedPanelOverlay() {
   const shownBlocks = ALL_BLOCKS.filter(b => active.includes(b.id))
 
   return (
-    <ResizeHandles overlayId="advancedpanel">
-      <div className="overlay" style={{ width: 348 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="advancedpanel" label="Advanced Panel">
           <span
             onClick={() => setEditing(e => !e)}
@@ -74,6 +72,5 @@ export default function AdvancedPanelOverlay() {
           </div>
         )}
       </div>
-    </ResizeHandles>
   )
 }

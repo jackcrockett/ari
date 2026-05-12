@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 function windDirLabel(deg) {
   const dirs = ['N','NE','E','SE','S','SW','W','NW']
@@ -24,8 +23,7 @@ export default function WeatherOverlay() {
   ]
 
   return (
-    <ResizeHandles overlayId="weather">
-      <div className="overlay" style={{ width: 190 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="weather" label="Weather" />
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, padding: '8px 10px 10px' }}>
           {stats.map(({ label, value, color }) => (
@@ -36,6 +34,5 @@ export default function WeatherOverlay() {
           ))}
         </div>
       </div>
-    </ResizeHandles>
   )
 }

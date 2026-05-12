@@ -1,24 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&family=Barlow:wght@400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700;800&display=swap');
 
 :root {
   /* ARI Colour System */
   --ari-red:        #E8001D;
   --ari-red-dim:    rgba(232, 0, 29, 0.15);
-  --ari-surface-1:  #0e0e10;
-  --ari-surface-2:  #16161a;
-  --ari-surface-3:  #1e1e24;
-  --ari-border:     rgba(255, 255, 255, 0.07);
-  --ari-border-mid: rgba(255, 255, 255, 0.12);
+  --ari-surface-1:  #09090b;
+  --ari-surface-2:  #111115;
+  --ari-surface-3:  #1a1a20;
+  --ari-border:     rgba(255, 255, 255, 0.09);
+  --ari-border-mid: rgba(255, 255, 255, 0.15);
   --ari-text-1:     #ffffff;
-  --ari-text-2:     rgba(255, 255, 255, 0.65);
-  --ari-text-3:     rgba(255, 255, 255, 0.35);
-  --ari-text-4:     rgba(255, 255, 255, 0.2);
+  --ari-text-2:     rgba(255, 255, 255, 0.75);
+  --ari-text-3:     rgba(255, 255, 255, 0.4);
+  --ari-text-4:     rgba(255, 255, 255, 0.22);
 
   /* Status colours */
   --ari-green:  #22C55E;
   --ari-amber:  #F59E0B;
   --ari-purple: #A855F7;
-  --ari-blue:   #3B82F6;
+  --ari-blue:   #38BDF8;
+  --ari-teal:   #2DD4BF;
 
   /* Typography */
   --font-ui:   'Barlow', sans-serif;
@@ -26,7 +27,7 @@
   --font-mono: 'DM Mono', monospace;
 
   /* Overlay sizing */
-  --overlay-radius: 6px;
+  --overlay-radius: 5px;
   --overlay-padding: 10px 12px;
 }
 
@@ -45,6 +46,15 @@ body {
   user-select: none;
 }
 
+/* Overlays zoom 1.4× so content designed at logical px fills the physical window */
+body.is-overlay {
+  zoom: 1.4;
+  height: 100%;
+}
+body.is-overlay #root {
+  height: 100%;
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -52,36 +62,37 @@ body {
 
 /* Overlay base */
 .overlay {
-  background: rgba(10, 10, 12, 0.88);
-  border: 1px solid var(--ari-border);
+  background: rgba(8, 8, 10, 0.94);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--overlay-radius);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
   overflow: hidden;
+  position: relative;
 }
 
 .overlay-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid var(--ari-border);
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.025);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
 }
 
 .overlay-label {
   font-family: var(--font-data);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--ari-text-3);
+  color: rgba(255,255,255,0.45);
 }
 
 .live-badge {
   font-family: var(--font-data);
   font-size: 8px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   color: #fff;
   background: var(--ari-red);
   padding: 2px 5px;

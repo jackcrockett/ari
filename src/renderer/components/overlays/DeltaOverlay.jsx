@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 export default function DeltaOverlay() {
   const { data } = useTelemetry()
@@ -13,8 +12,7 @@ export default function DeltaOverlay() {
   const sign  = delta > 0 ? '+' : ''
 
   return (
-    <ResizeHandles overlayId="delta">
-      <div className="overlay" style={{ width: 340 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="delta" label="Delta">
           <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em' }}>
             VS BEST LAP
@@ -51,6 +49,5 @@ export default function DeltaOverlay() {
           </div>
         </div>
       </div>
-    </ResizeHandles>
   )
 }

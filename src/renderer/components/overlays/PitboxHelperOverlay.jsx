@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 const DEFAULT_PIT_LIMIT = 60  // km/h fallback if YAML not yet parsed
 
@@ -18,8 +17,7 @@ export default function PitboxHelperOverlay() {
   const barColor  = overLimit ? '#E8001D' : pct > 0.9 ? '#F59E0B' : '#22C55E'
 
   return (
-    <ResizeHandles overlayId="pitboxhelper">
-      <div className="overlay" style={{ width: 248, borderColor: onPitRoad ? 'rgba(245,158,11,0.3)' : undefined }}>
+      <div className="overlay" style={{ width: '100%', borderColor: onPitRoad ? 'rgba(245,158,11,0.3)' : undefined }}>
         <DragHandle overlayId="pitboxhelper" label="Pitbox Helper">
           {onPitRoad && (
             <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, fontWeight: 700, color: '#F59E0B', background: 'rgba(245,158,11,0.15)', padding: '2px 5px', borderRadius: 3 }}>
@@ -77,6 +75,5 @@ export default function PitboxHelperOverlay() {
           )}
         </div>
       </div>
-    </ResizeHandles>
   )
 }

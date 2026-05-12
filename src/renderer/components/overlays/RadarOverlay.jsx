@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 // Radar shows proximity by lapDistPct delta.
 // iRacing does not expose X/Z for other cars in live telemetry,
@@ -95,8 +94,7 @@ export default function RadarOverlay() {
   }, [drivers, player])
 
   return (
-    <ResizeHandles overlayId="radar">
-      <div className="overlay" style={{ width: 170 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="radar" label="Radar" />
         <div style={{ padding: 4 }}>
           <canvas ref={canvasRef} width={162} height={148} style={{ display: 'block', width: '100%' }} />
@@ -112,6 +110,5 @@ export default function RadarOverlay() {
           </div>
         </div>
       </div>
-    </ResizeHandles>
   )
 }

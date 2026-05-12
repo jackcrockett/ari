@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 function formatTime(seconds) {
   if (seconds < 0) return '--:--'
@@ -28,8 +27,7 @@ export default function SessionTimerOverlay() {
   const subLabel  = isLapped ? 'LAPS LEFT' : 'TIME LEFT'
 
   return (
-    <ResizeHandles overlayId="sessiontimer">
-      <div className="overlay" style={{ width: 200 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="sessiontimer" label="Session Timer">
           <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             {sessionType}
@@ -49,6 +47,5 @@ export default function SessionTimerOverlay() {
           )}
         </div>
       </div>
-    </ResizeHandles>
   )
 }

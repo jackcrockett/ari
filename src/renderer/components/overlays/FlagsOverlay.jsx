@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 // iRacing SessionFlags bitmask values
 const F = {
@@ -38,8 +37,7 @@ export default function FlagsOverlay() {
   const flag = getFlag(flags)
 
   return (
-    <ResizeHandles overlayId="flags">
-      <div className="overlay" style={{ width: 200 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="flags" label="Flag" />
         <div style={{
           margin: '8px 10px 10px',
@@ -70,6 +68,5 @@ export default function FlagsOverlay() {
           </span>
         </div>
       </div>
-    </ResizeHandles>
   )
 }

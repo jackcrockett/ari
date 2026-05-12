@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 const SHOW_THRESHOLD_PCT    = 0.06   // show when within 6% of lap behind player
 const SHOW_THRESHOLD_DIFF   = 0.03   // tighter threshold for same-class cars
@@ -73,14 +72,12 @@ export default function OvertakeAlertOverlay() {
 
   if (!alert) {
     return (
-      <ResizeHandles overlayId="overtakealert">
-        <div className="overlay" style={{ width: 268 }}>
+        <div className="overlay" style={{ width: '100%' }}>
           <DragHandle overlayId="overtakealert" label="Overtake Alert" />
           <div style={{ padding: '6px 10px 8px', fontFamily: 'var(--font-data)', fontSize: 10, color: 'rgba(255,255,255,0.2)' }}>
             No cars closing
           </div>
         </div>
-      </ResizeHandles>
     )
   }
 
@@ -90,8 +87,7 @@ export default function OvertakeAlertOverlay() {
   const accentBdr  = alert.isDifferentClass ? 'rgba(192,132,252,0.4)' : 'rgba(245,158,11,0.4)'
 
   return (
-    <ResizeHandles overlayId="overtakealert">
-      <div className="overlay" style={{ width: 268, borderColor: accentBdr }}>
+      <div className="overlay" style={{ width: '100%', borderColor: accentBdr }}>
         <DragHandle overlayId="overtakealert" label="Overtake Alert">
           {alert.isDifferentClass && (
             <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, fontWeight: 700, color: '#C084FC', background: 'rgba(192,132,252,0.15)', padding: '2px 5px', borderRadius: 3 }}>
@@ -128,6 +124,5 @@ export default function OvertakeAlertOverlay() {
           </span>
         </div>
       </div>
-    </ResizeHandles>
   )
 }

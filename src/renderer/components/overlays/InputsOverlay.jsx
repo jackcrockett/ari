@@ -1,84 +1,59 @@
 import React, { useRef, useEffect, useCallback } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 const HISTORY      = 300
-const CONTENT_H    = 68
 const THROTTLE_COL = '#22C55E'
-const BRAKE_COL    = '#E8001D'
-const CLUTCH_COL   = '#60A5FA'
+const BRAKE_COL    = '#ff2348'
 
-// Compact vertical pedal bar
-function PedalBar({ value = 0, color, label }) {
+// Vertical pedal bar — fills bottom-to-top, no decorative labels
+function VBar({ value = 0, color }) {
   const pct = Math.round(Math.max(0, Math.min(1, value)) * 100)
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: 14, height: '100%' }}>
-      <div style={{
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flex: 1 }}>
+      <span style={{
         fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700,
-        color: pct > 5 ? color : 'rgba(255,255,255,0.2)', lineHeight: 1, marginBottom: 1,
+        color: pct > 2 ? color : 'rgba(255,255,255,0.15)', lineHeight: 1,
+        minWidth: 16, textAlign: 'center',
       }}>
         {pct}
-      </div>
+      </span>
       <div style={{
-        width: '100%', flex: 1, minHeight: 0,
-        background: 'rgba(255,255,255,0.06)', borderRadius: 2,
-        position: 'relative', overflow: 'hidden',
+        width: 12, flex: 1,
+        background: 'rgba(255,255,255,0.07)',
+        borderRadius: 2, overflow: 'hidden', position: 'relative',
       }}>
         <div style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           height: `${pct}%`,
           background: color,
           borderRadius: '0 0 2px 2px',
-          transition: 'height 0.025s linear',
-          boxShadow: pct > 5 ? `0 0 6px ${color}66` : 'none',
+          transition: 'height 0.04s linear',
+          boxShadow: pct > 2 ? `0 0 5px ${color}55` : 'none',
         }} />
       </div>
-      <span style={{
-        fontFamily: 'var(--font-data)', fontSize: 7, fontWeight: 700,
-        letterSpacing: '0.1em', color: 'rgba(255,255,255,0.3)',
-        textTransform: 'uppercase', lineHeight: 1,
-      }}>
-        {label}
-      </span>
     </div>
   )
 }
 
-// Steering wheel — matches reference circle design
+// Simple steering wheel — ring + hub + one top indicator dot
 function SteeringWheel({ value = 0, maxAngle = 450 }) {
   const deg = value * maxAngle
-  const cx = 24, cy = 24, r = 18
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, flexShrink: 0 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
       <svg
-        width={48} height={48} viewBox="0 0 48 48"
-        style={{ transform: `rotate(${deg}deg)`, transition: 'transform 0.025s linear' }}
+        width={38} height={38} viewBox="0 0 38 38"
+        style={{ transform: `rotate(${deg}deg)`, transition: 'transform 0.04s linear' }}
       >
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth={4} />
-        <circle cx={cx} cy={cy} r={5} fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.2)" strokeWidth={1.5} />
-        {[0, 120, 240].map(a => {
-          const rad = (a - 90) * Math.PI / 180
-          return <line key={a}
-            x1={cx + 6 * Math.cos(rad)} y1={cy + 6 * Math.sin(rad)}
-            x2={cx + (r - 1) * Math.cos(rad)} y2={cy + (r - 1) * Math.sin(rad)}
-            stroke="rgba(255,255,255,0.28)" strokeWidth={3} strokeLinecap="round" />
-        })}
-        <circle cx={cx} cy={cy - r + 3} r={2.5} fill="#E8001D" />
+        {/* Outer ring */}
+        <circle cx={19} cy={19} r={15} fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth={3} />
+        {/* Center hub */}
+        <circle cx={19} cy={19} r={5} fill="rgba(255,255,255,0.55)" />
+        {/* Top indicator */}
+        <circle cx={19} cy={5} r={2.5} fill="rgba(255,255,255,0.9)" />
       </svg>
-      <span style={{
-        fontFamily: 'var(--font-mono)', fontSize: 8, fontWeight: 700,
-        color: Math.abs(value) > 0.02 ? '#fff' : 'rgba(255,255,255,0.2)', lineHeight: 1,
-      }}>
-        {value >= 0 ? 'R' : 'L'} {Math.abs(Math.round(deg))}°
-      </span>
     </div>
   )
-}
-
-function Divider() {
-  return <div style={{ width: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.07)', margin: '4px 0', flexShrink: 0 }} />
 }
 
 export default function InputsOverlay() {
@@ -92,7 +67,6 @@ export default function InputsOverlay() {
     historyRef.current.push({
       throttle: Math.max(0, Math.min(1, data.throttle ?? 0)),
       brake:    Math.max(0, Math.min(1, data.brake    ?? 0)),
-      clutch:   Math.max(0, Math.min(1, data.clutch   ?? 0)),
     })
     if (historyRef.current.length > HISTORY) historyRef.current.shift()
   }, [data])
@@ -126,14 +100,12 @@ export default function InputsOverlay() {
       ctx.strokeStyle = color
       ctx.lineWidth   = 1.5
       ctx.lineJoin    = 'round'
-      ctx.lineCap     = 'round'
       h.forEach((s, i) => {
         const x = toX(i), y = toY(s[key])
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
       })
       ctx.stroke()
 
-      // Filled area
       ctx.beginPath()
       h.forEach((s, i) => {
         const x = toX(i), y = toY(s[key])
@@ -142,11 +114,10 @@ export default function InputsOverlay() {
       ctx.lineTo(toX(h.length - 1), toY(0))
       ctx.lineTo(toX(0), toY(0))
       ctx.closePath()
-      ctx.fillStyle = color + '22'
+      ctx.fillStyle = color + '18'
       ctx.fill()
     }
 
-    drawLine('clutch',   CLUTCH_COL)
     drawLine('brake',    BRAKE_COL)
     drawLine('throttle', THROTTLE_COL)
   }, [])
@@ -159,105 +130,59 @@ export default function InputsOverlay() {
 
   const throttle  = data?.throttle ?? 0
   const brake     = data?.brake    ?? 0
-  const clutch    = data?.clutch   ?? 0
-  const steering  = data?.steering ?? 0
   const gear      = data?.gear ?? 0
   const speed     = data?.speed ?? 0
-  const rpm       = data?.rpm ?? 0
+  const steering  = data?.steering ?? 0
   const gearLabel = gear === 0 ? 'N' : gear === -1 ? 'R' : String(gear)
 
   return (
-    <ResizeHandles overlayId="inputs">
-      <div className="overlay" style={{ width: 480 }}>
+    <div className="overlay" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'row', alignItems: 'stretch' }}>
+      <DragHandle overlayId="inputs" label="Inputs" />
 
-        <DragHandle overlayId="inputs" label="Inputs">
-          <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em' }}>
-            {Math.round(rpm / 100) * 100 > 0 ? `${(rpm / 1000).toFixed(1)}k RPM` : ''}
-          </span>
-        </DragHandle>
-
-        {/* Single compact content row — left: gear/speed, then bars, then wheel, then trace */}
-        <div style={{
-          display: 'flex', alignItems: 'stretch',
-          padding: '6px 10px', gap: 8,
-          height: CONTENT_H,
+      {/* Gear + speed */}
+      <div style={{
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '6px 10px', flexShrink: 0, minWidth: 44,
+      }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)', fontSize: 32, fontWeight: 900, lineHeight: 1,
+          color: '#F59E0B',
         }}>
-
-          {/* Gear + Speed — leftmost, matches reference layout */}
-          <div style={{
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            gap: 0, minWidth: 42, flexShrink: 0,
-          }}>
-            <span style={{
-              fontFamily: 'var(--font-mono)', fontSize: 32, fontWeight: 900, lineHeight: 1,
-              color: '#F59E0B',
-            }}>
-              {gearLabel}
-            </span>
-            <span style={{
-              fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700,
-              color: 'rgba(255,255,255,0.9)', lineHeight: 1,
-            }}>
-              {Math.round(speed)}
-            </span>
-            <span style={{
-              fontFamily: 'var(--font-data)', fontSize: 7,
-              color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em',
-            }}>
-              KPH
-            </span>
-          </div>
-
-          <Divider />
-
-          {/* T / B / C bars with live % values */}
-          <div style={{ display: 'flex', gap: 4, alignItems: 'stretch' }}>
-            <PedalBar value={throttle} color={THROTTLE_COL} label="T" />
-            <PedalBar value={brake}    color={BRAKE_COL}    label="B" />
-            <PedalBar value={clutch}   color={CLUTCH_COL}   label="C" />
-          </div>
-
-          <Divider />
-
-          {/* Steering wheel */}
-          <SteeringWheel value={steering} />
-
-          <Divider />
-
-          {/* Scrolling input trace — takes remaining space on the right */}
-          <div style={{
-            flex: 1, minWidth: 0,
-            background: 'rgba(0,0,0,0.3)',
-            borderRadius: 4, overflow: 'hidden',
-            border: '1px solid rgba(255,255,255,0.05)',
-            position: 'relative',
-          }}>
-            <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
-            {/* Live T/B/C percentages overlaid on trace */}
-            <div style={{
-              position: 'absolute', top: 3, right: 5,
-              display: 'flex', gap: 5, alignItems: 'center',
-              pointerEvents: 'none',
-            }}>
-              {[
-                { v: throttle, c: THROTTLE_COL, l: 'T' },
-                { v: brake,    c: BRAKE_COL,    l: 'B' },
-                { v: clutch,   c: CLUTCH_COL,   l: 'C' },
-              ].map(({ v, c, l }) => (
-                <span key={l} style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700,
-                  color: Math.round(v * 100) > 0 ? c : 'rgba(255,255,255,0.2)',
-                  textShadow: '0 0 4px rgba(0,0,0,0.8)',
-                }}>
-                  {Math.round(v * 100)}
-                </span>
-              ))}
-            </div>
-          </div>
-
-        </div>
+          {gearLabel}
+        </span>
+        <span style={{
+          fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 600,
+          color: 'rgba(255,255,255,0.55)', lineHeight: 1, marginTop: 2,
+        }}>
+          {speed}
+        </span>
       </div>
-    </ResizeHandles>
+
+      {/* Divider */}
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', alignSelf: 'stretch', flexShrink: 0 }} />
+
+      {/* T + B bars */}
+      <div style={{ display: 'flex', flexDirection: 'row', gap: 4, padding: '6px 8px', alignSelf: 'stretch', flexShrink: 0 }}>
+        <VBar value={throttle} color={THROTTLE_COL} />
+        <VBar value={brake}    color={BRAKE_COL} />
+      </div>
+
+      {/* Divider */}
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', alignSelf: 'stretch', flexShrink: 0 }} />
+
+      {/* Steering wheel */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '0 8px', flexShrink: 0 }}>
+        <SteeringWheel value={steering} />
+      </div>
+
+      {/* Divider */}
+      <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', alignSelf: 'stretch', flexShrink: 0 }} />
+
+      {/* Trace graph — absolutely fills its flex slot */}
+      <div style={{ flex: 1, minWidth: 0, position: 'relative', background: 'rgba(0,0,0,0.3)', margin: '4px', borderRadius: 2, alignSelf: 'stretch' }}>
+        <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block' }} />
+      </div>
+    </div>
   )
 }

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 import DriverRow from '../ui/DriverRow'
 import { DEFAULT_COLUMNS } from '../../lib/columnDefs'
 import { DEFAULT_VARIANT } from '../../lib/overlayVariants'
@@ -44,8 +43,7 @@ export default function LeaderboardOverlay() {
   }
 
   return (
-    <ResizeHandles overlayId="leaderboard">
-      <div className="overlay" style={{ width: 268 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="leaderboard" label="Leaderboard" onSettings={openSettings}>
           <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.08em' }}>
             {data?.sessionType || ''}
@@ -73,6 +71,5 @@ export default function LeaderboardOverlay() {
           ))}
         </div>
       </div>
-    </ResizeHandles>
   )
 }

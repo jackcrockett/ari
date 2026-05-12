@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 const HISTORY_LEN = 30
 
@@ -48,8 +47,7 @@ export default function HeartRateOverlay() {
   const zoneColor = zone === 'REST' ? '#22C55E' : zone === 'ACTIVE' ? '#3B82F6' : zone === 'HIGH' ? '#F59E0B' : '#E8001D'
 
   return (
-    <ResizeHandles overlayId="heartrate">
-      <div className="overlay" style={{ width: 152 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="heartrate" label="Heart Rate">
           <span onClick={() => setEditing(e => !e)} style={{ fontFamily: 'var(--font-data)', fontSize: 8, cursor: 'pointer', color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.1)', padding: '1px 4px', borderRadius: 3 }}>
             {editing ? 'SET' : 'INPUT'}
@@ -86,6 +84,5 @@ export default function HeartRateOverlay() {
           </div>
         )}
       </div>
-    </ResizeHandles>
   )
 }

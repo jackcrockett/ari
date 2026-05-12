@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 function toCanvas(pt, W, H, pad) {
   return [pad + pt[0] * (W - pad * 2), pad + (1 - pt[1]) * (H - pad * 2)]
@@ -93,13 +92,11 @@ export default function MinimapOverlay() {
   }, [drivers, ready])
 
   return (
-    <ResizeHandles overlayId="minimap">
-      <div className="overlay" style={{ width: 140, background: 'rgba(8,8,10,0.82)' }}>
+      <div className="overlay" style={{ width: '100%', background: 'rgba(8,8,10,0.82)' }}>
         <DragHandle overlayId="minimap" label="Map" />
         <div style={{ padding: 3 }}>
           <canvas ref={canvasRef} width={134} height={120} style={{ display: 'block', width: '100%' }} />
         </div>
       </div>
-    </ResizeHandles>
   )
 }

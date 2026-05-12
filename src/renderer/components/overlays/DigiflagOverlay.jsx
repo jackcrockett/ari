@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 const F = {
   CHECKERED: 0x0001, WHITE:  0x0002, GREEN: 0x0004,
@@ -28,8 +27,7 @@ export default function DigiflagOverlay() {
   const flag  = getFlag(flags)
 
   return (
-    <ResizeHandles overlayId="digiflag">
-      <div className="overlay" style={{ width: 308 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="digiflag" label="Digiflag" />
         <div style={{
           margin: '6px 8px 8px',
@@ -69,6 +67,5 @@ export default function DigiflagOverlay() {
           </div>
         </div>
       </div>
-    </ResizeHandles>
   )
 }

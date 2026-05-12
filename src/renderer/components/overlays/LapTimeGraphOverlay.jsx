@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 export default function LapTimeGraphOverlay() {
   const { data } = useTelemetry()
@@ -81,8 +80,7 @@ export default function LapTimeGraphOverlay() {
   }, [laps])
 
   return (
-    <ResizeHandles overlayId="lapgraph">
-      <div className="overlay" style={{ width: 288 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="lapgraph" label="Lap Graph">
           <span style={{ fontFamily: 'var(--font-data)', fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>
             {laps.length} laps
@@ -92,6 +90,5 @@ export default function LapTimeGraphOverlay() {
           <canvas ref={canvasRef} width={280} height={148} style={{ display: 'block', width: '100%' }} />
         </div>
       </div>
-    </ResizeHandles>
   )
 }

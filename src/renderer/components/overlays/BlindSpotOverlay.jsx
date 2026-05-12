@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 const ALONGSIDE_PCT = 0.012  // 1.2% of lap distance = alongside threshold
 
@@ -61,8 +60,7 @@ export default function BlindSpotOverlay() {
   )
 
   return (
-    <ResizeHandles overlayId="blindspot">
-      <div className="overlay" style={{ width: 150 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="blindspot" label="Blind Spot" />
         <div style={{ display: 'flex', gap: 4, padding: '5px 6px 7px' }}>
           {indicator(leftActive, leftCars, 'FWD')}
@@ -70,6 +68,5 @@ export default function BlindSpotOverlay() {
           {indicator(rightActive, rightCars, 'RR')}
         </div>
       </div>
-    </ResizeHandles>
   )
 }

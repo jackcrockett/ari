@@ -53,13 +53,14 @@ export function buildDemoData(tick) {
       rpm: 11500 + Math.sin(t * 3) * 2000,
       throttle, brake, clutch, steering, delta, tyreCompound: 'M',
       fuel: { level: fuelLevel, perLap: fuelPerLap, lapsRemaining: fuelLevel / fuelPerLap, lapsToFinish: 18, needed: Math.max(0, (18 * fuelPerLap) - fuelLevel) },
+      fuelPct: Math.round(fuelLevel / 42 * 100),
       currentLap: 12, totalLaps: 30, sessionType: 'Race', lapsRemain: 18,
       pitSpeedLimit: 60,
       trackTemp: 34.2, airTemp: 22.5, windSpeed: 8.4, windDir: 215, skies: 'Partly Cloudy',
       sessionFlags: 0x04, sessionTimeRemain: Math.max(0, 1800 - tick * 0.5),
       latAccel: Math.sin(lapPhase * 2) * 2.8, lonAccel: Math.cos(lapPhase) * 1.5,
       ersRemaining: 0.7, ersDeployPct: 0.35,
-      onPitRoad: false, isInGarage: false,
+      onPitRoad: false, isInGarage: false, isOnTrack: true,
       relative, standings: [...relative].sort((a, b) => a.position - b.position)
     }
   }
@@ -174,7 +175,22 @@ export function formatLapTime(seconds) {
   return `${m}:${s.padStart(6,'0')}`
 }
 
+// iRacing license tier colours — background colour for the licence badge pill
+// R=Rookie (red), D (orange), C (yellow), B (green), A (blue), P/WC (black)
 export function licenseColor(lic) {
-  const map = { R:'#AE2012', D:'#CA6702', C:'#EE9B00', B:'#94D2BD', A:'#0A9396', P:'#005F73', WC:'#9B2226' }
-  return map[lic] || '#666'
+  const map = {
+    R:  '#C11010',  // Rookie  — red
+    D:  '#D46B08',  // Class D — orange
+    C:  '#B8900A',  // Class C — amber/gold
+    B:  '#1E8A28',  // Class B — green
+    A:  '#1A5FA8',  // Class A — blue
+    P:  '#2A2A2A',  // Pro     — near-black
+    WC: '#2A2A2A',  // Pro WC  — near-black
+  }
+  return map[lic] || '#444'
+}
+
+// For Class C (yellow bg) use dark text; all others use white
+export function licenseTextColor(lic) {
+  return lic === 'C' ? '#1a1a00' : '#ffffff'
 }

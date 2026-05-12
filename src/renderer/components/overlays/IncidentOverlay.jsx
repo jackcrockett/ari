@@ -1,7 +1,6 @@
 import React, { useRef, useMemo } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 const DRIVER_COLOURS = ['#F59E0B','#64748B','#3B82F6','#FF6B35','#E8001D','#22C55E','#A855F7','#EC4899']
 
@@ -34,8 +33,7 @@ export default function IncidentOverlay() {
   const totalInc = drivers.reduce((s, d) => s + d.inc, 0)
 
   return (
-    <ResizeHandles overlayId="incident">
-      <div className="overlay" style={{ width: 220 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="incident" label="Incidents">
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>
             {totalInc}x total
@@ -99,6 +97,5 @@ export default function IncidentOverlay() {
           )
         })}
       </div>
-    </ResizeHandles>
   )
 }

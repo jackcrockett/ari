@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 function pitWindows(totalLaps, stops) {
   const stintLen = totalLaps / (stops + 1)
@@ -34,8 +33,7 @@ export default function RaceScheduleOverlay() {
   const inWindow   = nextWindow && currentLap >= nextWindow.open && currentLap <= nextWindow.close
 
   return (
-    <ResizeHandles overlayId="raceschedule">
-      <div className="overlay" style={{ width: 288 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="raceschedule" label="Pit Window">
           {inWindow && (
             <span style={{ fontFamily: 'var(--font-data)', fontSize: 8, fontWeight: 700, color: '#22C55E', background: 'rgba(34,197,94,0.15)', padding: '2px 5px', borderRadius: 3 }}>
@@ -111,6 +109,5 @@ export default function RaceScheduleOverlay() {
           </div>
         )}
       </div>
-    </ResizeHandles>
   )
 }

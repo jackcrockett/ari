@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useCallback, useContext } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useContext } from 'react'
 import { OverlayPreviewContext } from '../OverlayPreviewContext'
+import { grabPassthrough, releasePassthrough } from '../../lib/passthroughManager'
 
 const GRID = 8
 
@@ -10,6 +11,9 @@ const GRID = 8
  * never loses the event. Snap-to-grid every 8px; hold Alt to disable snap.
  * Drag origin and committed offset are stored in refs — no state updates
  * during drag, so no re-renders while dragging.
+ *
+ * Passthrough is coordinated through passthroughManager so DragHandle and
+ * ResizeHandles don't conflict when both hover states change simultaneously.
  */
 export default function DragHandle({ overlayId, label, children, onSettings }) {
   const isPreview   = useContext(OverlayPreviewContext)
@@ -17,6 +21,7 @@ export default function DragHandle({ overlayId, label, children, onSettings }) {
   const dragState   = useRef(null)   // null = not dragging
   const hoverRef    = useRef(false)
   const hasElectron = typeof window !== 'undefined' && window.ari
+  const [visible, setVisible] = useState(false)
 
   // ── Hover: toggle passthrough on entry/exit of the handle bar ───────────────
   useEffect(() => {
@@ -31,12 +36,20 @@ export default function DragHandle({ overlayId, label, children, onSettings }) {
                    e.clientY >= r.top  && e.clientY <= r.bottom
       if (over !== hoverRef.current) {
         hoverRef.current = over
-        window.ari.setPassthrough(overlayId, !over)
+        if (over) grabPassthrough(overlayId)
+        else      releasePassthrough(overlayId)
       }
     }
 
     document.addEventListener('mousemove', onMove)
-    return () => document.removeEventListener('mousemove', onMove)
+    return () => {
+      document.removeEventListener('mousemove', onMove)
+      // Release passthrough if unmounting while hovered
+      if (hoverRef.current) {
+        hoverRef.current = false
+        releasePassthrough(overlayId)
+      }
+    }
   }, [overlayId, hasElectron, isPreview])
 
   // ── Drag ────────────────────────────────────────────────────────────────────
@@ -76,7 +89,8 @@ export default function DragHandle({ overlayId, label, children, onSettings }) {
     const onUp = () => {
       dragState.current = null
       hoverRef.current  = false
-      if (hasElectron) window.ari.dragEnd(overlayId)  // saves pos, re-enables passthrough
+      if (hasElectron) window.ari.dragEnd(overlayId)
+      releasePassthrough(overlayId)
       document.removeEventListener('mousemove', onMove)
       document.removeEventListener('mouseup',   onUp)
     }
@@ -89,44 +103,55 @@ export default function DragHandle({ overlayId, label, children, onSettings }) {
     <div
       ref={handleRef}
       onMouseDown={onMouseDown}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => { if (!dragState.current) setVisible(false) }}
       style={{
+        position:        'absolute',
+        top: 0, left: 0, right: 0,
+        height:          22,
+        zIndex:          20,
         display:         'flex',
         alignItems:      'center',
         justifyContent:  'space-between',
-        padding:         '5px 10px',
-        background:      'rgba(255,255,255,0.03)',
-        borderBottom:    '1px solid rgba(255,255,255,0.07)',
-        cursor:          'grab',
+        padding:         '0 8px',
+        background:      visible ? 'rgba(8,8,12,0.92)' : 'transparent',
+        borderBottom:    visible ? '1px solid rgba(255,255,255,0.09)' : 'none',
+        cursor:          visible ? 'grab' : 'default',
         userSelect:      'none',
         WebkitUserSelect:'none',
+        transition:      'background 0.12s',
+        pointerEvents:   'auto',
       }}
     >
-      {/* Drag grip */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      {/* Drag grip + label */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        opacity: visible ? 1 : 0, transition: 'opacity 0.12s',
+      }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(3, 3px)',
           gridTemplateRows:    'repeat(2, 3px)',
-          gap: 2, opacity: 0.4, flexShrink: 0,
+          gap: 2, opacity: 0.45, flexShrink: 0,
         }}>
           {[...Array(6)].map((_, i) => (
             <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: '#fff' }} />
           ))}
         </div>
         <span style={{
-          fontFamily:    'var(--font-data)',
-          fontSize:      9,
-          fontWeight:    600,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color:         'rgba(255,255,255,0.35)',
+          fontFamily: 'var(--font-data)', fontSize: 10, fontWeight: 700,
+          letterSpacing: '0.14em', textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.45)',
         }}>
           {label}
         </span>
       </div>
 
       {/* Right slot */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        opacity: visible ? 1 : 0, transition: 'opacity 0.12s',
+      }}>
         {children}
         {onSettings && (
           <button
@@ -137,7 +162,7 @@ export default function DragHandle({ overlayId, label, children, onSettings }) {
               width: 18, height: 18,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'none', border: 'none',
-              color: 'rgba(255,255,255,0.25)', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.3)', cursor: 'pointer',
               padding: 0, borderRadius: 3,
             }}
           >

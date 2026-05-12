@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 export default function BoostBoxOverlay() {
   const { data } = useTelemetry()
@@ -12,8 +11,7 @@ export default function BoostBoxOverlay() {
   const hasERS = ersRemaining != null
 
   return (
-    <ResizeHandles overlayId="boostbox">
-      <div className="overlay" style={{ width: 190 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="boostbox" label="Boost / ERS" />
         {!hasERS ? (
           <div style={{ padding: '10px 12px', fontFamily: 'var(--font-data)', fontSize: 10, color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
@@ -55,6 +53,5 @@ export default function BoostBoxOverlay() {
           </div>
         )}
       </div>
-    </ResizeHandles>
   )
 }

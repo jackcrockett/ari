@@ -20,7 +20,11 @@ export default function DriverRow({ driver, columns, isLast, data, variant = DEF
 
   const leftAccent = vt.leftAccentMode === 'all'
     ? colour
-    : driver.isPlayer ? '#E8001D' : 'transparent'
+    : driver.isPlayer ? '#22C55E' : 'transparent'
+
+  const rowBg = driver.isPlayer
+    ? `rgba(34,197,94,${vt.playerBgOpacity})`
+    : 'transparent'
 
   return (
     <div style={{
@@ -28,9 +32,10 @@ export default function DriverRow({ driver, columns, isLast, data, variant = DEF
       alignItems: 'center',
       padding: `${vt.rowPaddingV}px ${vt.rowPaddingH}px`,
       gap: vt.gap,
-      background: driver.isPlayer ? `rgba(232,0,29,${vt.playerBgOpacity})` : 'transparent',
-      borderBottom: isLast || !vt.showRowBorder ? 'none' : '1px solid rgba(255,255,255,0.04)',
-      borderLeft: `2px solid ${leftAccent}`,
+      background: rowBg,
+      borderBottom: isLast || !vt.showRowBorder ? 'none' : '1px solid rgba(255,255,255,0.05)',
+      borderLeft: `3px solid ${leftAccent}`,
+      transition: 'background 0.25s ease, border-left-color 0.25s ease',
     }}>
       {columns.map(colId => {
         const def = COLUMN_DEFS[colId]

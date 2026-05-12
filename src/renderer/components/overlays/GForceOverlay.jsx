@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 
 const MAX_G = 4
 const TRAIL_LEN = 40
@@ -81,8 +80,7 @@ export default function GForceOverlay() {
   }, [latG, lonG])
 
   return (
-    <ResizeHandles overlayId="gforce">
-      <div className="overlay" style={{ width: 152 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="gforce" label="G-Force" />
         <div style={{ padding: 4 }}>
           <canvas ref={canvasRef} width={144} height={144} style={{ display: 'block', width: '100%' }} />
@@ -96,6 +94,5 @@ export default function GForceOverlay() {
           </span>
         </div>
       </div>
-    </ResizeHandles>
   )
 }

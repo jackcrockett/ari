@@ -1,7 +1,6 @@
 import React from 'react'
 import { useTelemetry } from '../../hooks/useTelemetry'
 import DragHandle from '../ui/DragHandle'
-import ResizeHandles from '../ui/ResizeHandles'
 import { formatGap } from '../../hooks/useTelemetry'
 
 export default function HorizontalStandingsOverlay() {
@@ -9,8 +8,7 @@ export default function HorizontalStandingsOverlay() {
   const standings = data?.standings ?? []
 
   return (
-    <ResizeHandles overlayId="hstandings">
-      <div className="overlay" style={{ width: 940 }}>
+      <div className="overlay" style={{ width: '100%' }}>
         <DragHandle overlayId="hstandings" label="Standings" />
         <div style={{ display: 'flex', gap: 2, padding: '4px 6px 6px', overflowX: 'hidden' }}>
           {standings.slice(0, 20).map(d => (
@@ -42,6 +40,5 @@ export default function HorizontalStandingsOverlay() {
           ))}
         </div>
       </div>
-    </ResizeHandles>
   )
 }
